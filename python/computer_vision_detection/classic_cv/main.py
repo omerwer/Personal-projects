@@ -119,7 +119,7 @@ def streamer(video_path, frames_queue):
     cap.release()
 
 
-def axon_vision(video_path):
+def run_detection(video_path):
 
     q1 = Queue(maxsize=20)
     q2 = Queue(maxsize=20)
@@ -140,7 +140,7 @@ def axon_vision(video_path):
 if __name__ == "__main__":
     args = parser.parse_args()
     video_path = args.video
-    axon_vision(video_path)
+    run_detection(video_path)
     print("Movement detection finished successfully!")
 
     if args.shutdown:
