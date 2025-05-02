@@ -4,7 +4,7 @@ namespace iron_dome_game
 {
     Rocket::Rocket(Velocity velocity)
     {
-        trajectory.initialState.pos.x = GRID_COLUMNS - 190;
+        trajectory.initialState.pos.x = 5;
         trajectory.initialState.pos.y = 5;
         trajectory.initialState.velocity.x = velocity.x;
         trajectory.initialState.velocity.y = velocity.y;

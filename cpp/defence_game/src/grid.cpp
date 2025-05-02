@@ -110,7 +110,9 @@ void Grid::forEveryPixel(std::function<void(int row, int col)> function, const i
                     if (start_comparing){
                         if (ent == ent2)
                             continue;
-                        if (intersects(ent, ent2)){
+                        if (intersects(ent, ent2) && 
+                            ent->type() !=EntityType::PITCHER && ent2->type() !=EntityType::PITCHER &&
+                            ent->type() !=EntityType::CANNON && ent2->type() !=EntityType::CANNON){
                             if ((ent->type() == EntityType::PLATE && ent2->type() == EntityType::ROCKET) ||
                             (ent->type() == EntityType::ROCKET && ent2->type() == EntityType::PLATE)) {
                                 hits++;
