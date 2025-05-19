@@ -11,15 +11,11 @@ from bs4 import BeautifulSoup as BS
 # import urllib
 # import re
 # import urllib.request
-import requests
-import os
 import urllib3
 urllib3.disable_warnings()
 
-import imgkit
 
 import re
-from PIL import Image
 import pytesseract
 import matplotlib.pyplot as plt
 
@@ -52,41 +48,18 @@ def parse_style_scores_and_industry(text):
 def main():
     ta = TickerAnalyzer()
     ticker = input("Please enter a ticker: ")
+    ta.get_zacks_info(ticker)
     # data = ta.zacks(ticker)
     # print(ta.zacks(ticker))
     # print(ta.get_url(ticker))
 
     # header = {'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.9; rv:32.0) Gecko/20100101 Firefox/32.0',}
-    url = f'https://www.zacks.com/stock/quote/{ticker.upper()}?q={ticker.upper()}'
+    # url = f'https://www.zacks.com/stock/quote/{ticker.upper()}?q={ticker.upper()}'
     # r = requests.get(url, headers=header, verify=False)
     # soups = BS(r.text,"lxml")
 
     # with open(f'{ticker}_content.txt', 'w', encoding='utf-8') as file:
     #     file.write(soups.prettify())
-
-    # fetch_style_scores_screenshot(ticker)
-    options = {
-        'javascript-delay': '5000',  # wait 3 seconds for JS
-        'no-stop-slow-scripts': '',
-        'enable-javascript': '',
-        'width': '1280',  # or adjust based on your needs
-    }
-
-    config = imgkit.config(wkhtmltoimage='/usr/bin/wkhtmltoimage')
-    image_path = 'image.png'
-    imgkit.from_url(url, image_path, config=config, options=options)
-
-    crop_box = (330, 180, 1145, 480)
-
-    # Crop the image
-    cropped_img = Image.open(image_path).crop(crop_box)
-
-    plt.imshow(cropped_img)
-    plt.axis('off')
-    plt.show()
-
-    # Save or show the cropped image
-    # cropped_img.save("cropped_style_scores.png")
 
     # text = pytesseract.image_to_string(cropped_img)
     # print(text)
