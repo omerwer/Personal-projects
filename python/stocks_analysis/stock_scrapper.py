@@ -1,15 +1,22 @@
 
 import requests
 import imgkit
+import os
 from PIL import Image
 from tradingview_ta import TA_Handler, Interval
 import yfinance as yf
 from datetime import datetime
+import pytesseract
+import multiprocessing
+import re
+from finvizfinance.quote import finvizfinance
 
 class TickerAnalyzer:
     def __init__(self):
         self.zacks = None
         self.tv = None
+        self.yf = None
+        self.finviz = None
 
     def get_zacks_info(self, ticker: str):
         self.zacks = self.Zacks()
@@ -20,8 +27,12 @@ class TickerAnalyzer:
         return self.tv.get_ticker_info(ticker)
     
     def get_yf_info(self, ticker: str):
-        self.tv = self.YahooFinance()
-        return self.tv.get_ticker_info(ticker)
+        self.yf = self.YahooFinance()
+        return self.yf.get_ticker_info(ticker)
+    
+    def get_finviz_info(self, ticker: str):
+        self.finviz = self.Finviz()
+        return self.finviz.get_ticker_info(ticker)
 
     class Zacks():
         def __init__(self):
@@ -43,10 +54,9 @@ class TickerAnalyzer:
 
             crop_box = (330, 180, 1145, 480)
 
-            # Crop the image
             cropped_img = Image.open(image_path).crop(crop_box)
+            os.remove(image_path)
 
-            # Save or show the cropped image
             cropped_img.save(f"style_scores_{ticker}.png")
 
         def get_ticker_info(self, ticker: str):
@@ -131,6 +141,7 @@ class TickerAnalyzer:
     class Tradingview():
         def __init__(self):
             self.ticker = None
+            self.summary = dict()
             self.exchange  = {
                                 # North America
                                 "NYSE": "america",
@@ -197,6 +208,57 @@ class TickerAnalyzer:
                                 "BIST": "europe",      # Turkey
                             }
         
+        def _render_imgkit(self, url, output_path, config, options, crop_box, str, shared=None):
+            try:
+                
+                imgkit.from_url(url, output_path, config=config, options=options)
+
+                cropped_img = Image.open(output_path).crop(crop_box)
+                os.remove(output_path)
+
+                if str == 'forecast':
+                    text = pytesseract.image_to_string(cropped_img)
+                    match = re.search(r"\d+\.\d+", text)
+                    if match:
+                        price_target = float(match.group())
+                        shared['Price target'] = price_target
+
+                else:
+                    cropped_img.save(f"{self.ticker}_{str}.png")
+
+            except Exception as e:
+                pass
+        
+        def _get_tv_stats_from_image(self, ticker: str, exchange: str):
+            url = f'https://www.tradingview.com/symbols/{exchange}-{ticker}/'
+            forecast_url = url + 'forecast/'
+
+            options = {
+                'javascript-delay': '10000',
+                'no-stop-slow-scripts': '',
+                'enable-javascript': '',
+                'width': '1280',  # or adjust based on your needs
+            }
+
+            config = imgkit.config(wkhtmltoimage='/usr/bin/wkhtmltoimage')
+
+            price_target = multiprocessing.Manager().dict()
+
+            image_path_ks = 'tv_ks.png'
+            image_path_forecast = 'tv_forecast.png'
+
+            process_ks = multiprocessing.Process(target=self._render_imgkit, args=(url, image_path_ks, config, options, (15, 1721, 286, 2219), 'ks'))
+            process_forecast = multiprocessing.Process(target=self._render_imgkit, args=(forecast_url, image_path_forecast, config, options, (19, 654, 199, 732), 'forecast', price_target))
+
+            process_ks.start()
+            process_forecast.start()
+
+            process_ks.join(30)
+            process_forecast.join(30)
+
+            self.summary.update(price_target)
+
+        
         def get_ticker_info(self, ticker: str):
             self.ticker = ticker.upper()
             for ex, region in self.exchange.items():
@@ -208,12 +270,72 @@ class TickerAnalyzer:
                         interval=Interval.INTERVAL_1_MONTH,
                     )
 
+                    self._get_tv_stats_from_image(self.ticker, ex)
+
                     # Retrieve the analysis
                     analysis = handler.get_analysis()
 
-                    return analysis.summary
+                    self.summary.update({'Analysis' : analysis.summary})
+
+                    return self.summary
                 except:
                     continue
 
+    class Finviz:
+        def __init__(self):
+            self.ticker = None
+            self.summary = dict() 
+        
+        def get_ticker_info(self, ticker: str):
+            stock = finvizfinance(ticker.upper())
+            data = stock.ticker_full_info()
+            # print(data.keys())
+            # print(data['ratings_outer'].to_dict(orient='index'))
+            # print(data['news'].to_dict(orient='index'))
+            
+            for attr in  ['Index', 'Perf Week','EPS next Y','Insider Trans','Perf Month','EPS next Q','Short Float','Shs Float',
+                          'Perf Quarter','EPS this Y','Inst Trans','Perf Half Y','Book/sh','EPS next 5Y','ROE','Perf YTD',
+                          'EPS past 5Y','ROI','52W High','Quick Ratio','Sales past 5Y','52W Low','ATR (14)','Current Ratio',
+                          'EPS Y/Y TTM','RSI (14)','Volatility W','Volatility M','Sales Y/Y TTM','Recom','Option/Short','LT Debt/Eq',
+                          'EPS Q/Q','Payout','Rel Volume','Prev Close','Sales Surprise','EPS Surprise','Sales Q/Q','EPS next Y Percentage',
+                          'ROA','Short Interest','Perf Year','Avg Volume','SMA20','SMA50','SMA200','Trades','Volume','Change']:
+                _ = data['fundament'].pop(attr)
+
+            self.summary.update({'General info' : data['fundament']})
+
+            upgrade_downgrade_list = list()
+            curr_date = datetime.now()
+
+            for key, rating in data['ratings_outer'].to_dict(orient='index').items():
+                updgrade_downgrade_year = int(rating['Date'].year)
+                if updgrade_downgrade_year >= curr_date.year - 1:
+                    upgrade_downgrade_list.append(rating)
+
+            self.summary.update({'Upgrades/Downgrades' : upgrade_downgrade_list})
+
+            news_list = list()
+
+            for key, news in data['news'].to_dict(orient='index').items():
+                news_year = news['Date'].year
+                news_month = news['Date'].month
+                news_day = news['Date'].day
+
+                if ((int(news_year) == curr_date.year and int(news_month) == curr_date.month and abs(int(news_day) - curr_date.day) <= 3) or 
+                    (int(news_month) == curr_date.month - 1 and abs(curr_date.day -  int(news_day)) > 28) or
+                    (int(news_year) == curr_date.year - 1 and news_month == 12 and abs(curr_date.day -  int(news_day)) > 28)):
+                        news_list.append(news)
+
+            self.summary.update({'News' : news_list})
+
+            insiders_list = list()
+
+            for key, insider in stock.ticker_inside_trader().to_dict(orient='index').items():
+                if str(curr_date.year)[-2:] in insider['Date'] or str(int(curr_date.year)-1)[-2:] in insider['Date']:
+                    insiders_list.append(insider)
+
+            self.summary.update({'Insiders trading' : insiders_list})
+
+
+            return self.summary
 
 

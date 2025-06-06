@@ -13,7 +13,6 @@ import urllib3
 urllib3.disable_warnings()
 
 import re
-import pytesseract
 import matplotlib.pyplot as plt
 
 from selenium import webdriver
@@ -74,20 +73,12 @@ def main():
     ta = TickerAnalyzer()
     ticker = input("Please enter a ticker: ")
     # ta.get_zacks_info(ticker)
-    print(ta.get_tradingview_info(ticker))
+    # print(ta.get_tradingview_info(ticker))
     # print(ta.get_yf_info(ticker))
     # ta.get_yf_info(ticker)
+    # print(ta.get_finviz_info(ticker))
+    ta.get_finviz_info(ticker)
 
-    # header = {'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.9; rv:32.0) Gecko/20100101 Firefox/32.0',}
-    # url = f'https://www.zacks.com/stock/quote/{ticker.upper()}?q={ticker.upper()}'
-    # r = requests.get(url, headers=header, verify=False)
-    # soups = BS(r.text,"lxml")
-
-    # with open(f'{ticker}_content.txt', 'w', encoding='utf-8') as file:
-    #     file.write(soups.prettify())
-
-    # text = pytesseract.image_to_string(cropped_img)
-    # print(text)
 
 
 
