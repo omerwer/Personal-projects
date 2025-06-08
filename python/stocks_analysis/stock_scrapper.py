@@ -1,5 +1,6 @@
 
 import requests
+import readline
 import imgkit
 import os
 from PIL import Image
@@ -10,6 +11,10 @@ import pytesseract
 import multiprocessing
 import re
 from finvizfinance.quote import finvizfinance
+# import openai
+# from huggingface_hub import login
+# from transformers import pipeline
+from g4f.client import Client
 
 class TickerAnalyzer:
     def __init__(self):
@@ -17,6 +22,7 @@ class TickerAnalyzer:
         self.tv = None
         self.yf = None
         self.finviz = None
+        self.chatgpt = None
 
     def get_zacks_info(self, ticker: str):
         self.zacks = self.Zacks()
@@ -33,6 +39,10 @@ class TickerAnalyzer:
     def get_finviz_info(self, ticker: str):
         self.finviz = self.Finviz()
         return self.finviz.get_ticker_info(ticker)
+    
+    def get_chatgpt_info(self, ticker: str):
+        self.chatgpt = self.Chatgpt()
+        return self.chatgpt.get_ticker_info(ticker)
 
     class Zacks():
         def __init__(self):
@@ -337,5 +347,35 @@ class TickerAnalyzer:
 
 
             return self.summary
+
+    class Chatgpt:
+        def __init__(self):
+            self.ticker = None
+            self.summary = None
+
+        def _send_prompt(self, ticker, prompt=None):
+            while not prompt:
+                prompt = input(f'Please provide a prompt for {ticker}:\n')
+                if ticker not in prompt:
+                    prompt = None
+                    print('Please ask for information only for the relevant stock ticker.\n')
+            
+            client = Client() # from https://github.com/xtekky/gpt4free
+            # Example for prompt: please provide stock analysis for NextEra Energy Inc (ticker nee)
+            response = client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[{"role": "user", "content": prompt}],
+                web_search=True
+            )
+            return response.choices[0].message.content
+        
+        def get_ticker_info(self, ticker: str):
+            self.summary = self._send_prompt(ticker)
+            return self.summary
+
+            
+
+
+        
 
 
