@@ -11,9 +11,6 @@ import pytesseract
 import multiprocessing
 import re
 from finvizfinance.quote import finvizfinance
-# import openai
-# from huggingface_hub import login
-# from transformers import pipeline
 from g4f.client import Client
 
 class TickerAnalyzer:
@@ -58,7 +55,7 @@ class TickerAnalyzer:
                 'width': '1280',  # or adjust based on your needs
             }
 
-            config = imgkit.config(wkhtmltoimage='/usr/bin/wkhtmltoimage')
+            config = imgkit.config(wkhtmltoimage='/usr/bin/wkhtmltoimage') # First install - sudo apt-get install wkhtmltopdf
             image_path = 'image.png'
             imgkit.from_url(url, image_path, config=config, options=options)
 
@@ -159,68 +156,67 @@ class TickerAnalyzer:
                                 "AMEX": "america",
                                 "TSX": "america",
                                 "TSXV": "america",
-                                "CSE": "america",
+                                "CSE": "america", # Canadian Securities Exchange
 
                                 # Europe
-                                "LSE": "europe",
-                                "XETRA": "europe",
-                                "FWB": "europe",
-                                "Euronext": "europe",
-                                "BME": "europe",
-                                "SIX": "europe",
-                                "Borsa Italiana": "europe",
-                                "Oslo": "europe",
-                                "WSE": "europe",
+                                "LSE": "United Kingdom",       # London Stock Exchange
+                                "XETRA": "Germany",            # Deutsche Börse (electronic platform)
+                                "FWB": "Germany",              # Frankfurt Stock Exchange
+                                "Euronext": "Multi-country",   # Mainly France, Netherlands, Belgium, Portugal, Ireland
+                                "BME": "Spain",                # Bolsas y Mercados Españoles
+                                "SIX": "Switzerland",          # Swiss Exchange
+                                "Borsa Italiana": "Italy",     # Italy
+                                "Oslo": "Norway",              # Oslo Børs
+                                "WSE": "Poland",               # Warsaw Stock Exchange
 
                                 # Asia
-                                "TSE": "asia",         # Tokyo
-                                "HKEX": "asia",        # Hong Kong
-                                "SGX": "asia",         # Singapore
-                                "KOSPI": "asia",       # Korea
-                                "SSE": "asia",         # Shanghai
-                                "SZSE": "asia",        # Shenzhen
-                                "TWSE": "asia",        # Taiwan
-                                "NSE": "india",
-                                "BSE": "india",
+                                "TSE": "Japan",                # Tokyo Stock Exchange
+                                "HKEX": "Hong Kong",
+                                "SGX": "Singapore",
+                                "KOSPI": "South Korea",
+                                "SSE": "China",                # Shanghai Stock Exchange
+                                "SZSE": "China",               # Shenzhen Stock Exchange
+                                "TWSE": "Taiwan",
+                                "NSE": "India",                # National Stock Exchange
+                                "BSE": "India",                # Bombay Stock Exchange
 
                                 # Australia
                                 "ASX": "oceania",
 
                                 # Middle East
-                                "TASE": "middle_east",
-                                "DFM": "middle_east",
-                                "ADX": "middle_east",
-                                "QSE": "middle_east",
-                                "KSE": "middle_east",
-                                "BHB": "middle_east",
-                                "MSM": "middle_east",
+                                "TASE": "Israel",             # Tel Aviv Stock Exchange
+                                "DFM": "United Arab Emirates",# Dubai Financial Market
+                                "ADX": "United Arab Emirates",# Abu Dhabi Securities Exchange
+                                "QSE": "Qatar",
+                                "KSE": "Kuwait",              # Boursa Kuwait
+                                "BHB": "Bahrain",
+                                "MSM": "Oman",                # Muscat Securities Market
 
                                 # Africa
-                                "JSE": "africa",
-                                "NSE Nigeria": "africa",
-                                "EGX": "africa",
+                                "JSE": "South Africa",        # Johannesburg Stock Exchange
+                                "NSE Nigeria": "Nigeria",     # Nigerian Stock Exchange
+                                "EGX": "Egypt",               # Egyptian Exchange
 
                                 # Latin America
-                                "B3": "america",       # Brazil
-                                "BMV": "america",      # Mexico
-                                "BCBA": "america",     # Argentina
-                                "Santiago": "america", # Chile
-                                "Lima": "america",     # Peru
-                                "BVC": "america",      # Colombia
+                                "B3": "Brazil",               # B3 (Brasil Bolsa Balcão)
+                                "BMV": "Mexico",              # Bolsa Mexicana de Valores
+                                "BCBA": "Argentina",          # Bolsa de Comercio de Buenos Aires
+                                "Santiago": "Chile",          # Bolsa de Comercio de Santiago
+                                "Lima": "Peru",               # Bolsa de Valores de Lima
+                                "BVC": "Colombia",            # Bolsa de Valores de Colombia
 
                                 # Other / Eastern Europe & Misc
-                                "MOEX": "europe",
-                                "MICEX": "europe",
-                                "IDX": "asia",         # Indonesia
-                                "PSE": "asia",         # Philippines
-                                "SET": "asia",         # Thailand
-                                "HNX": "asia",         # Vietnam
-                                "BIST": "europe",      # Turkey
+                                "MOEX": "Russia",             # Moscow Exchange
+                                "MICEX": "Russia",            # Merged into MOEX
+                                "IDX": "Indonesia",           # Indonesia Stock Exchange
+                                "PSE": "Philippines",         # Philippine Stock Exchange
+                                "SET": "Thailand",            # Stock Exchange of Thailand
+                                "HNX": "Vietnam",             # Hanoi Stock Exchange
+                                "BIST": "Turkey",             # Borsa Istanbul
                             }
         
         def _render_imgkit(self, url, output_path, config, options, crop_box, str, shared=None):
             try:
-                
                 imgkit.from_url(url, output_path, config=config, options=options)
 
                 cropped_img = Image.open(output_path).crop(crop_box)
@@ -282,7 +278,6 @@ class TickerAnalyzer:
 
                     self._get_tv_stats_from_image(self.ticker, ex)
 
-                    # Retrieve the analysis
                     analysis = handler.get_analysis()
 
                     self.summary.update({'Analysis' : analysis.summary})
@@ -299,9 +294,6 @@ class TickerAnalyzer:
         def get_ticker_info(self, ticker: str):
             stock = finvizfinance(ticker.upper())
             data = stock.ticker_full_info()
-            # print(data.keys())
-            # print(data['ratings_outer'].to_dict(orient='index'))
-            # print(data['news'].to_dict(orient='index'))
             
             for attr in  ['Index', 'Perf Week','EPS next Y','Insider Trans','Perf Month','EPS next Q','Short Float','Shs Float',
                           'Perf Quarter','EPS this Y','Inst Trans','Perf Half Y','Book/sh','EPS next 5Y','ROE','Perf YTD',
