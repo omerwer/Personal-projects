@@ -3,7 +3,6 @@
 import readline
 
 from stock_scrapper import TickerAnalyzer
-import random
 import urllib3
 
 urllib3.disable_warnings()
@@ -12,12 +11,10 @@ urllib3.disable_warnings()
 def main():
     ta = TickerAnalyzer()
     ticker = input("Please enter a ticker: ")
-    # ta.get_zacks_info(ticker)
-    # print(ta.get_tradingview_info(ticker))
-    # print(ta.get_yf_info(ticker))
-    # ta.get_yf_info(ticker)
-    # print(ta.get_finviz_info(ticker))
-    # ta.get_finviz_info(ticker)
+    print(ta.get_zacks_info(ticker))
+    print(ta.get_tradingview_info(ticker))
+    print(ta.get_yf_info(ticker))
+    print(ta.get_finviz_info(ticker))
     print(ta.get_chatgpt_info(ticker))
 
 

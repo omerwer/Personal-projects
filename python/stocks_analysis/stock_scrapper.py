@@ -44,6 +44,7 @@ class TickerAnalyzer:
     class Zacks():
         def __init__(self):
             self.ticker = None
+            self.summary = dict()
 
         def _get_zacks_styles_score_image(self, ticker: str):
             url = f'https://www.zacks.com/stock/quote/{ticker}?q={ticker}'
@@ -67,24 +68,31 @@ class TickerAnalyzer:
             cropped_img.save(f"style_scores_{ticker}.png")
 
         def get_ticker_info(self, ticker: str):
-            data_dict = {}
+            try:
+                data_dict = {}
 
-            self.ticker = ticker.upper()
+                self.ticker = ticker.upper()
 
-            self._get_zacks_styles_score_image(self.ticker)
+                self._get_zacks_styles_score_image(self.ticker)
 
-            response = requests.get(url=f"https://quote-feed.zacks.com/index.php?t={self.ticker}")
-            data = dict(response.json())[self.ticker]
-            data_dict.update({'name' : data['name']})
-            data_dict.update({'ticker' : data['ticker']})
-            data_dict.update({'zacks rank' : f"{data['zacks_rank']} ({data['zacks_rank_text']})"})
-            data_dict.update({"Forward P/E" : data['source']['sungard']["pe_ratio"]})
+                response = requests.get(url=f"https://quote-feed.zacks.com/index.php?t={self.ticker}")
+                data = dict(response.json())[self.ticker]
+                data_dict.update({'name' : data['name']})
+                data_dict.update({'ticker' : data['ticker']})
+                data_dict.update({'zacks rank' : f"{data['zacks_rank']} ({data['zacks_rank_text']})"})
+                data_dict.update({"Forward P/E" : data['source']['sungard']["pe_ratio"]})
 
-            data_dict.update({"dividend_freq" : data['source']['sungard']["dividend_freq"]})
-            data_dict.update({'dividend_yield' : data['dividend_yield']+'%'})
-            data_dict.update({"dividend" : data['source']['sungard']["dividend"]})
+                data_dict.update({"dividend_freq" : data['source']['sungard']["dividend_freq"]})
+                data_dict.update({'dividend_yield' : data['dividend_yield']+'%'})
+                data_dict.update({"dividend" : data['source']['sungard']["dividend"]})
 
-            return data_dict
+                self.summary = data_dict
+            
+            except Exception as e:
+                self.summary = {"msg" : "Ticker doesn't exist. Please provide a valid stock ticker."}
+
+            return self.summary
+                
 
     class YahooFinance():
         def __init__(self):
@@ -93,55 +101,59 @@ class TickerAnalyzer:
             self.summary = dict()
         
         def get_ticker_info(self, ticker: str):
-            ticker_uppercase = ticker.upper()
-            self.ticker = yf.Ticker(ticker_uppercase)
-            for attr in dir(self.ticker):
-                if attr in self.attributes and not attr == 'news':
-                    attr_value = getattr(self.ticker, attr)
-                    if attr == 'analyst_price_targets':
-                        conclusion = None
-                        if attr_value['current'] < attr_value['low']:
-                            conclusion = f'{ticker_uppercase} trades lower than low target! seems undervalued.'
-                        elif attr_value['current'] >= attr_value['high']:
-                            conclusion = f'{ticker_uppercase} trades higher than high target! seems overvalued.'
-                        else:
-                            conclusion = f'{ticker_uppercase} trades within range.'
-                        
-                        reccomendation_and_conclusion = (attr_value, conclusion)
-
-                        self.summary.update({'Price targets' : reccomendation_and_conclusion})
-                    elif attr == 'recommendations_summary':
-                        self.summary.update({'recommendations' : {}})
+            try:
+                ticker_uppercase = ticker.upper()
+                self.ticker = yf.Ticker(ticker_uppercase)
+                for attr in dir(self.ticker):
+                    if attr in self.attributes and not attr == 'news':
                         attr_value = getattr(self.ticker, attr)
-                        recommendations_dict = attr_value.to_dict(orient='index')
-                        for (key, value) in recommendations_dict.items():
-                            _ = value.pop('period')
-                            self.summary['recommendations'].update({f'{key}-Month' : value})
+                        if attr == 'analyst_price_targets':
+                            conclusion = None
+                            if attr_value['current'] < attr_value['low']:
+                                conclusion = f'{ticker_uppercase} trades lower than low target! seems undervalued.'
+                            elif attr_value['current'] >= attr_value['high']:
+                                conclusion = f'{ticker_uppercase} trades higher than high target! seems overvalued.'
+                            else:
+                                conclusion = f'{ticker_uppercase} trades within range.'
+                            
+                            reccomendation_and_conclusion = (attr_value, conclusion)
 
-                    elif attr == 'upgrades_downgrades':
-                        upgrades_dict = attr_value.to_dict(orient='index')
-                        recent_upgrades_dict = {}
-                        for date, values in upgrades_dict.items():
-                            if date.year >= datetime.now().year - 1:
-                                recent_upgrades_dict.update({date : values})
+                            self.summary.update({'Price targets' : reccomendation_and_conclusion})
+                        elif attr == 'recommendations_summary':
+                            self.summary.update({'recommendations' : {}})
+                            attr_value = getattr(self.ticker, attr)
+                            recommendations_dict = attr_value.to_dict(orient='index')
+                            for (key, value) in recommendations_dict.items():
+                                _ = value.pop('period')
+                                self.summary['recommendations'].update({f'{key}-Month' : value})
 
-                        self.summary.update({"Upgrades & downgrades" : recent_upgrades_dict})
-                    
-                elif attr == 'news':
-                    recent_news_list = []
-                    for news in getattr(self.ticker, attr):
-                        curr_date = datetime.now()
-                        year, month, _ = news['content']['pubDate'].split('-')
-                        if (int(year) == curr_date.year or (int(year) == curr_date.year - 1 and abs(curr_date.month -  int(month)) > 6)):
-                            for key in ['id', 'description', 'displayTime', 'isHosted', 
-                                        'bypassModal', 'previewUrl', 'thumbnail', 'provider', 
-                                        'clickThroughUrl', 'metadata', 'finance', 'storyline']:
-                                _ = news['content'].pop(key)
+                        elif attr == 'upgrades_downgrades':
+                            upgrades_dict = attr_value.to_dict(orient='index')
+                            recent_upgrades_dict = {}
+                            for date, values in upgrades_dict.items():
+                                if date.year >= datetime.now().year - 1:
+                                    recent_upgrades_dict.update({date : values})
 
-                            recent_news_list.append(news['content'])
+                            self.summary.update({"Upgrades & downgrades" : recent_upgrades_dict})
+                        
+                    elif attr == 'news':
+                        recent_news_list = []
+                        for news in getattr(self.ticker, attr):
+                            curr_date = datetime.now()
+                            year, month, _ = news['content']['pubDate'].split('-')
+                            if (int(year) == curr_date.year or (int(year) == curr_date.year - 1 and abs(curr_date.month -  int(month)) > 6)):
+                                for key in ['id', 'description', 'displayTime', 'isHosted', 
+                                            'bypassModal', 'previewUrl', 'thumbnail', 'provider', 
+                                            'clickThroughUrl', 'metadata', 'finance', 'storyline']:
+                                    _ = news['content'].pop(key)
 
-                    self.summary.update({'News' : recent_news_list})
+                                recent_news_list.append(news['content'])
 
+                        self.summary.update({'News' : recent_news_list})
+            
+            except Exception as e:
+                self.summary = {"msg" : "Ticker doesn't exist. Please provide a valid stock ticker."}
+                
             return self.summary
     
     
@@ -276,15 +288,19 @@ class TickerAnalyzer:
                         interval=Interval.INTERVAL_1_MONTH,
                     )
 
-                    self._get_tv_stats_from_image(self.ticker, ex)
-
                     analysis = handler.get_analysis()
+
+                    self._get_tv_stats_from_image(self.ticker, ex)
 
                     self.summary.update({'Analysis' : analysis.summary})
 
-                    return self.summary
                 except:
                     continue
+
+                if not self.summary:
+                    self.summary = {"msg" : "Ticker doesn't exist. Please provide a valid stock ticker"}
+
+                return self.summary
 
     class Finviz:
         def __init__(self):
@@ -292,53 +308,58 @@ class TickerAnalyzer:
             self.summary = dict() 
         
         def get_ticker_info(self, ticker: str):
-            stock = finvizfinance(ticker.upper())
-            data = stock.ticker_full_info()
+            try:
+                stock = finvizfinance(ticker.upper())
+                data = stock.ticker_full_info()
+                
+                for attr in  ['Index', 'Perf Week','EPS next Y','Insider Trans','Perf Month','EPS next Q','Short Float','Shs Float',
+                            'Perf Quarter','EPS this Y','Inst Trans','Perf Half Y','Book/sh','EPS next 5Y','ROE','Perf YTD',
+                            'EPS past 5Y','ROI','52W High','Quick Ratio','Sales past 5Y','52W Low','ATR (14)','Current Ratio',
+                            'EPS Y/Y TTM','RSI (14)','Volatility W','Volatility M','Sales Y/Y TTM','Recom','Option/Short','LT Debt/Eq',
+                            'EPS Q/Q','Payout','Rel Volume','Prev Close','Sales Surprise','EPS Surprise','Sales Q/Q','EPS next Y Percentage',
+                            'ROA','Short Interest','Perf Year','Avg Volume','SMA20','SMA50','SMA200','Trades','Volume','Change']:
+                    _ = data['fundament'].pop(attr)
+
+                self.summary.update({'General info' : data['fundament']})
+
+                upgrade_downgrade_list = list()
+                curr_date = datetime.now()
+
+                for key, rating in data['ratings_outer'].to_dict(orient='index').items():
+                    updgrade_downgrade_year = int(rating['Date'].year)
+                    if updgrade_downgrade_year >= curr_date.year - 1:
+                        upgrade_downgrade_list.append(rating)
+
+                self.summary.update({'Upgrades/Downgrades' : upgrade_downgrade_list})
+
+                news_list = list()
+
+                for key, news in data['news'].to_dict(orient='index').items():
+                    news_year = news['Date'].year
+                    news_month = news['Date'].month
+                    news_day = news['Date'].day
+
+                    if ((int(news_year) == curr_date.year and int(news_month) == curr_date.month and abs(int(news_day) - curr_date.day) <= 3) or 
+                        (int(news_month) == curr_date.month - 1 and abs(curr_date.day -  int(news_day)) > 28) or
+                        (int(news_year) == curr_date.year - 1 and news_month == 12 and abs(curr_date.day -  int(news_day)) > 28)):
+                            news_list.append(news)
+
+                self.summary.update({'News' : news_list})
+
+                insiders_list = list()
+
+                for key, insider in stock.ticker_inside_trader().to_dict(orient='index').items():
+                    if str(curr_date.year)[-2:] in insider['Date'] or str(int(curr_date.year)-1)[-2:] in insider['Date']:
+                        insiders_list.append(insider)
+
+                self.summary.update({'Insiders trading' : insiders_list})
             
-            for attr in  ['Index', 'Perf Week','EPS next Y','Insider Trans','Perf Month','EPS next Q','Short Float','Shs Float',
-                          'Perf Quarter','EPS this Y','Inst Trans','Perf Half Y','Book/sh','EPS next 5Y','ROE','Perf YTD',
-                          'EPS past 5Y','ROI','52W High','Quick Ratio','Sales past 5Y','52W Low','ATR (14)','Current Ratio',
-                          'EPS Y/Y TTM','RSI (14)','Volatility W','Volatility M','Sales Y/Y TTM','Recom','Option/Short','LT Debt/Eq',
-                          'EPS Q/Q','Payout','Rel Volume','Prev Close','Sales Surprise','EPS Surprise','Sales Q/Q','EPS next Y Percentage',
-                          'ROA','Short Interest','Perf Year','Avg Volume','SMA20','SMA50','SMA200','Trades','Volume','Change']:
-                _ = data['fundament'].pop(attr)
-
-            self.summary.update({'General info' : data['fundament']})
-
-            upgrade_downgrade_list = list()
-            curr_date = datetime.now()
-
-            for key, rating in data['ratings_outer'].to_dict(orient='index').items():
-                updgrade_downgrade_year = int(rating['Date'].year)
-                if updgrade_downgrade_year >= curr_date.year - 1:
-                    upgrade_downgrade_list.append(rating)
-
-            self.summary.update({'Upgrades/Downgrades' : upgrade_downgrade_list})
-
-            news_list = list()
-
-            for key, news in data['news'].to_dict(orient='index').items():
-                news_year = news['Date'].year
-                news_month = news['Date'].month
-                news_day = news['Date'].day
-
-                if ((int(news_year) == curr_date.year and int(news_month) == curr_date.month and abs(int(news_day) - curr_date.day) <= 3) or 
-                    (int(news_month) == curr_date.month - 1 and abs(curr_date.day -  int(news_day)) > 28) or
-                    (int(news_year) == curr_date.year - 1 and news_month == 12 and abs(curr_date.day -  int(news_day)) > 28)):
-                        news_list.append(news)
-
-            self.summary.update({'News' : news_list})
-
-            insiders_list = list()
-
-            for key, insider in stock.ticker_inside_trader().to_dict(orient='index').items():
-                if str(curr_date.year)[-2:] in insider['Date'] or str(int(curr_date.year)-1)[-2:] in insider['Date']:
-                    insiders_list.append(insider)
-
-            self.summary.update({'Insiders trading' : insiders_list})
+            except:
+                self.summary = {"msg" : "Ticker doesn't exist. Please provide a valid stock ticker"}
 
 
             return self.summary
+
 
     class Chatgpt:
         def __init__(self):
@@ -347,13 +368,13 @@ class TickerAnalyzer:
 
         def _send_prompt(self, ticker, prompt=None):
             while not prompt:
-                prompt = input(f'Please provide a prompt for {ticker}:\n')
-                if ticker not in prompt:
+                # Example for prompt: please provide stock analysis for NextEra Energy Inc (ticker nee)
+                prompt = input(f'Please provide a prompt for {ticker}\n(Example: please provide stock analysis for Apple (ticker aapl))\nPrompt: ')
+                if ticker not in prompt and ticker.upper() not in prompt:
                     prompt = None
                     print('Please ask for information only for the relevant stock ticker.\n')
             
             client = Client() # from https://github.com/xtekky/gpt4free
-            # Example for prompt: please provide stock analysis for NextEra Energy Inc (ticker nee)
             response = client.chat.completions.create(
                 model="gpt-4o-mini",
                 messages=[{"role": "user", "content": prompt}],

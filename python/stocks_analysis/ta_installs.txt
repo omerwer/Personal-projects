@@ -1,0 +1,9 @@
+requests
+imgkit
+pillow
+tradingview_ta
+yfinance
+pytesseract
+finvizfinance
+g4f
+urllib3
