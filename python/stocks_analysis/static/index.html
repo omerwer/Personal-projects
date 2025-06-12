@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Stock Analyzer</title>
+  <style>
+    body { font-family: sans-serif; padding: 20px; }
+    input, textarea { margin-bottom: 10px; width: 100%; }
+    img { max-width: 600px; margin-top: 20px; border: 1px solid #ccc; }
+    pre { background: #f0f0f0; padding: 10px; white-space: pre-wrap; }
+  </style>
+</head>
+<body>
+  <h1>Stock Analyzer</h1>
+
+  <input id="ticker" placeholder="Ticker (e.g. AAPL)" />
+
+  <div id="buttons">
+    <button onclick="fetchData('zacks')">Zacks</button>
+    <button onclick="fetchData('tradingview')">TradingView</button>
+    <button onclick="fetchData('yahoofinance')">Yahoo Finance</button>
+    <button onclick="fetchData('finviz')">Finviz</button>
+    <button onclick="prepareChatPrompt()">ChatGPT</button>
+  </div>
+
+  <!-- Hidden initially -->
+  <div id="chatgpt-prompt" style="display: none; margin-top: 10px;">
+    <textarea id="prompt" rows="4" placeholder=""></textarea>
+    <br />
+    <button onclick="sendChatPrompt()">Submit Prompt</button>
+  </div>
+
+  <pre id="output"></pre>
+  <img id="result-img" src="" style="display: none;" />
+
+  <script>
+    function prepareChatPrompt() {
+      const ticker = document.getElementById('ticker').value.trim();
+      if (!ticker) return alert('Enter ticker');
+
+      const example = `Example for prompt: please provide stock analysis for ${ticker.toUpperCase()} (ticker ${ticker.toLowerCase()})`;
+      document.getElementById('prompt').placeholder = example;
+      document.getElementById('prompt').value = '';
+      document.getElementById('chatgpt-prompt').style.display = 'block';
+      document.getElementById('output').textContent = 'Enter your prompt and click "Submit Prompt"...';
+    }
+
+    async function sendChatPrompt() {
+      const ticker = document.getElementById('ticker').value.trim();
+      const prompt = document.getElementById('prompt').value.trim();
+
+      if (!ticker || !prompt) return alert('Enter both ticker and prompt.');
+
+      const res = await fetch(`/chatgpt/${ticker}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt })
+      });
+
+      const data = await res.json();
+      if (res.ok) {
+        document.getElementById('output').textContent = JSON.stringify(data.summary, null, 2);
+      } else {
+        document.getElementById('output').textContent = `Error: ${data.error}`;
+      }
+
+      // Optionally hide prompt box after submission
+      // document.getElementById('chatgpt-prompt').style.display = 'none';
+    }
+
+    async function fetchData(source) {
+      const t = document.getElementById('ticker').value.trim();
+      if (!t) return alert('Enter ticker');
+
+      const res = await fetch(`/${source}/${t}`);
+      const data = await res.json();
+      document.getElementById('output').textContent = JSON.stringify(data.summary || data, null, 2);
+
+      if (data.image_url) {
+        document.getElementById('result-img').src = data.image_url;
+        document.getElementById('result-img').style.display = 'block';
+      } else {
+        document.getElementById('result-img').style.display = 'none';
+      }
+
+      // Hide ChatGPT prompt if another source is selected
+      document.getElementById('chatgpt-prompt').style.display = 'none';
+    }
+  </script>
+</body>
+</html>

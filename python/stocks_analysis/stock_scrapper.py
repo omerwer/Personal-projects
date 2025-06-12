@@ -1,6 +1,8 @@
 
 import requests
 import readline
+from abc import ABC, abstractmethod
+
 import imgkit
 import os
 from PIL import Image
@@ -37,15 +39,21 @@ class TickerAnalyzer:
         self.finviz = self.Finviz()
         return self.finviz.get_ticker_info(ticker)
     
-    def get_chatgpt_info(self, ticker: str):
+    def get_chatgpt_info(self, ticker: str, prompt: str):
         self.chatgpt = self.Chatgpt()
-        return self.chatgpt.get_ticker_info(ticker)
+        return self.chatgpt.get_ticker_info(ticker, prompt)
 
-    class Zacks():
+
+    class Source(ABC):
         def __init__(self):
             self.ticker = None
             self.summary = dict()
-
+    
+        # @abstractmethod
+        # def get_ticker_info(self, ticker: str):
+        #     pass
+    
+    class Zacks(Source):
         def _get_zacks_styles_score_image(self, ticker: str):
             url = f'https://www.zacks.com/stock/quote/{ticker}?q={ticker}'
 
@@ -65,7 +73,7 @@ class TickerAnalyzer:
             cropped_img = Image.open(image_path).crop(crop_box)
             os.remove(image_path)
 
-            cropped_img.save(f"style_scores_{ticker}.png")
+            cropped_img.save(f"static/images/style_scores_{ticker}.png")
 
         def get_ticker_info(self, ticker: str):
             try:
@@ -94,11 +102,10 @@ class TickerAnalyzer:
             return self.summary
                 
 
-    class YahooFinance():
+    class YahooFinance(Source):
         def __init__(self):
-            self.ticker = None
+            super().__init__()
             self.attributes = ['analyst_price_targets', 'news', 'recommendations_summary', 'upgrades_downgrades']
-            self.summary = dict()
         
         def get_ticker_info(self, ticker: str):
             try:
@@ -134,7 +141,12 @@ class TickerAnalyzer:
                                 if date.year >= datetime.now().year - 1:
                                     recent_upgrades_dict.update({date : values})
 
-                            self.summary.update({"Upgrades & downgrades" : recent_upgrades_dict})
+                            upgrades = {
+                                str(k): v for k, v in recent_upgrades_dict.items()
+                            }
+
+                            # self.summary.update({"Upgrades & downgrades" : recent_upgrades_dict})
+                            self.summary.update({"Upgrades & downgrades" : upgrades})
                         
                     elif attr == 'news':
                         recent_news_list = []
@@ -154,13 +166,13 @@ class TickerAnalyzer:
             except Exception as e:
                 self.summary = {"msg" : "Ticker doesn't exist. Please provide a valid stock ticker."}
                 
+            print(self.summary)
             return self.summary
     
     
-    class Tradingview():
+    class Tradingview(Source):
         def __init__(self):
-            self.ticker = None
-            self.summary = dict()
+            super().__init__()
             self.exchange  = {
                                 # North America
                                 "NYSE": "america",
@@ -242,10 +254,11 @@ class TickerAnalyzer:
                         shared['Price target'] = price_target
 
                 else:
-                    cropped_img.save(f"{self.ticker}_{str}.png")
+                    cropped_img.save(f"static/images/{self.ticker}_{str}.png")
 
             except Exception as e:
-                pass
+                if os.path.isfile(output_path):
+                    os.remove(output_path)
         
         def _get_tv_stats_from_image(self, ticker: str, exchange: str):
             url = f'https://www.tradingview.com/symbols/{exchange}-{ticker}/'
@@ -265,14 +278,14 @@ class TickerAnalyzer:
             image_path_ks = 'tv_ks.png'
             image_path_forecast = 'tv_forecast.png'
 
-            process_ks = multiprocessing.Process(target=self._render_imgkit, args=(url, image_path_ks, config, options, (15, 1721, 286, 2219), 'ks'))
+            process_ks = multiprocessing.Process(target=self._render_imgkit, args=(url, image_path_ks, config, options, (21, 2067, 309, 2583), 'ks'))
             process_forecast = multiprocessing.Process(target=self._render_imgkit, args=(forecast_url, image_path_forecast, config, options, (19, 654, 199, 732), 'forecast', price_target))
 
             process_ks.start()
             process_forecast.start()
 
-            process_ks.join(30)
-            process_forecast.join(30)
+            process_ks.join(45)
+            process_forecast.join(45)
 
             self.summary.update(price_target)
 
@@ -302,11 +315,7 @@ class TickerAnalyzer:
 
                 return self.summary
 
-    class Finviz:
-        def __init__(self):
-            self.ticker = None
-            self.summary = dict() 
-        
+    class Finviz(Source):       
         def get_ticker_info(self, ticker: str):
             try:
                 stock = finvizfinance(ticker.upper())
@@ -318,7 +327,10 @@ class TickerAnalyzer:
                             'EPS Y/Y TTM','RSI (14)','Volatility W','Volatility M','Sales Y/Y TTM','Recom','Option/Short','LT Debt/Eq',
                             'EPS Q/Q','Payout','Rel Volume','Prev Close','Sales Surprise','EPS Surprise','Sales Q/Q','EPS next Y Percentage',
                             'ROA','Short Interest','Perf Year','Avg Volume','SMA20','SMA50','SMA200','Trades','Volume','Change']:
-                    _ = data['fundament'].pop(attr)
+                    try:
+                        _ = data['fundament'].pop(attr)
+                    except:
+                        continue
 
                 self.summary.update({'General info' : data['fundament']})
 
@@ -330,7 +342,11 @@ class TickerAnalyzer:
                     if updgrade_downgrade_year >= curr_date.year - 1:
                         upgrade_downgrade_list.append(rating)
 
-                self.summary.update({'Upgrades/Downgrades' : upgrade_downgrade_list})
+                upgrades = {
+                    str(v) for v in upgrade_downgrade_list
+                }
+
+                self.summary.update({'Upgrades/Downgrades' : list(upgrades)})
 
                 news_list = list()
 
@@ -344,7 +360,11 @@ class TickerAnalyzer:
                         (int(news_year) == curr_date.year - 1 and news_month == 12 and abs(curr_date.day -  int(news_day)) > 28)):
                             news_list.append(news)
 
-                self.summary.update({'News' : news_list})
+                recent_news = {
+                    str(v) for v in news_list
+                }
+                
+                self.summary.update({'News' : list(recent_news)})
 
                 insiders_list = list()
 
@@ -352,43 +372,33 @@ class TickerAnalyzer:
                     if str(curr_date.year)[-2:] in insider['Date'] or str(int(curr_date.year)-1)[-2:] in insider['Date']:
                         insiders_list.append(insider)
 
-                self.summary.update({'Insiders trading' : insiders_list})
+                self.summary.update({'Insiders trading' : list(insiders_list)})
             
             except:
                 self.summary = {"msg" : "Ticker doesn't exist. Please provide a valid stock ticker"}
 
 
+            print(self.summary)
             return self.summary
-
+        
 
     class Chatgpt:
-        def __init__(self):
-            self.ticker = None
-            self.summary = None
+        def _send_prompt(self, ticker, prompt):
+            if not prompt:
+                raise ValueError("Prompt is required.")
+            if ticker.lower() not in prompt.lower():
+                raise ValueError("Prompt must mention the relevant stock ticker.")
 
-        def _send_prompt(self, ticker, prompt=None):
-            while not prompt:
-                # Example for prompt: please provide stock analysis for NextEra Energy Inc (ticker nee)
-                prompt = input(f'Please provide a prompt for {ticker}\n(Example: please provide stock analysis for Apple (ticker aapl))\nPrompt: ')
-                if ticker not in prompt and ticker.upper() not in prompt:
-                    prompt = None
-                    print('Please ask for information only for the relevant stock ticker.\n')
-            
-            client = Client() # from https://github.com/xtekky/gpt4free
+            client = Client()
             response = client.chat.completions.create(
                 model="gpt-4o-mini",
                 messages=[{"role": "user", "content": prompt}],
                 web_search=True
             )
             return response.choices[0].message.content
-        
-        def get_ticker_info(self, ticker: str):
-            self.summary = self._send_prompt(ticker)
-            return self.summary
 
-            
-
-
+        def get_ticker_info(self, ticker: str, prompt: str):
+            return self._send_prompt(ticker, prompt)
         
 
 
