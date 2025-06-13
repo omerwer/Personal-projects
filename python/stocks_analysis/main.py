@@ -10,6 +10,8 @@ import os
 import urllib3
 from fastapi import Request
 from fastapi.middleware.cors import CORSMiddleware
+import pandas as pd
+import math
 
 urllib3.disable_warnings()
 
@@ -17,6 +19,19 @@ ta = TickerAnalyzer()
 app = FastAPI()
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
+
+def sanitize_for_json(obj):
+    if isinstance(obj, dict):
+        return {k: sanitize_for_json(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [sanitize_for_json(v) for v in obj]
+    elif isinstance(obj, pd.Timestamp):
+        return obj.isoformat()
+    elif isinstance(obj, float):
+        if math.isnan(obj) or math.isinf(obj):
+            return None  # Or 0.0 or "N/A" depending on your preference
+        return obj
+    return obj
 
 
 @app.get("/")
@@ -41,13 +56,8 @@ def zacks(ticker: str):
 def tradingview(ticker: str):
     summary = ta.get_tradingview_info(ticker)
 
-    # image_filename = f"{ticker.upper()}_ks.png"
-
-    # image_url = f"/static/images/{image_filename}"
-
     return JSONResponse({
         "summary": summary,
-        # "image_url": image_url
     })
 
 
@@ -56,10 +66,11 @@ def zacks(ticker: str):
     summary = ta.get_yf_info(ticker)
     return JSONResponse({"summary": summary})
 
+
 @app.get("/finviz/{ticker}")
 def finviz(ticker: str):
     summary = ta.get_finviz_info(ticker)
-    return JSONResponse({"summary": summary})
+    return JSONResponse({"summary": sanitize_for_json(summary)})
 
 
 # CORS to allow frontend requests

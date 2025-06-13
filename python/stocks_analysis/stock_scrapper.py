@@ -14,8 +14,7 @@ import multiprocessing
 import re
 from finvizfinance.quote import finvizfinance
 from g4f.client import Client
-import numpy as np
-import cv2
+import pandas as pd
 
 class TickerAnalyzer:
     def __init__(self):
@@ -387,8 +386,6 @@ class TickerAnalyzer:
             except:
                 self.summary = {"msg" : "Ticker doesn't exist. Please provide a valid stock ticker"}
 
-
-            print(self.summary)
             return self.summary
         
 
