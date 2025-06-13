@@ -47,7 +47,7 @@ def zacks(ticker: str):
     image_url = f"/static/images/{image_filename}"
 
     return JSONResponse({
-        "summary": summary,
+        "summary": sanitize_for_json(summary),
         "image_url": image_url
     })
 
@@ -57,14 +57,14 @@ def tradingview(ticker: str):
     summary = ta.get_tradingview_info(ticker)
 
     return JSONResponse({
-        "summary": summary,
+        "summary": sanitize_for_json(summary),
     })
 
 
 @app.get("/yahoofinance/{ticker}")
 def zacks(ticker: str):
     summary = ta.get_yf_info(ticker)
-    return JSONResponse({"summary": summary})
+    return JSONResponse({"summary": sanitize_for_json(summary)})
 
 
 @app.get("/finviz/{ticker}")
@@ -92,7 +92,7 @@ async def chatgpt(ticker: str, request: Request):
 
         # Get the summary from your Chatgpt class logic
         summary = ta.get_chatgpt_info(ticker, prompt)
-        return JSONResponse({"summary": summary})
+        return JSONResponse({"summary": sanitize_for_json(summary)})
 
     except Exception as e:
         return JSONResponse(status_code=500, content={"error": str(e)})
