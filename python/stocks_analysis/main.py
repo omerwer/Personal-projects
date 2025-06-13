@@ -41,13 +41,13 @@ def zacks(ticker: str):
 def tradingview(ticker: str):
     summary = ta.get_tradingview_info(ticker)
 
-    image_filename = f"{ticker.upper()}_ks.png"
+    # image_filename = f"{ticker.upper()}_ks.png"
 
-    image_url = f"/static/images/{image_filename}"
+    # image_url = f"/static/images/{image_filename}"
 
     return JSONResponse({
         "summary": summary,
-        "image_url": image_url
+        # "image_url": image_url
     })
 
 

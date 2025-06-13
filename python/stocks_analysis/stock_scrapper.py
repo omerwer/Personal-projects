@@ -14,6 +14,8 @@ import multiprocessing
 import re
 from finvizfinance.quote import finvizfinance
 from g4f.client import Client
+import numpy as np
+import cv2
 
 class TickerAnalyzer:
     def __init__(self):
@@ -239,7 +241,7 @@ class TickerAnalyzer:
                                 "BIST": "Turkey",             # Borsa Istanbul
                             }
         
-        def _render_imgkit(self, url, output_path, config, options, crop_box, str, shared=None):
+        def _render_imgkit(self, url, output_path, config, options, crop_box, str, shared):
             try:
                 imgkit.from_url(url, output_path, config=config, options=options)
 
@@ -254,9 +256,16 @@ class TickerAnalyzer:
                         shared['Price target'] = price_target
 
                 else:
-                    cropped_img.save(f"static/images/{self.ticker}_{str}.png")
+                    text = pytesseract.image_to_string(cropped_img)
+                    
+                    pattern = r"(Key stats.*?(?:Beta \(1Y\)|Expense ratio)[^\d\-]*[-+]?\d*\.?\d+)"
+                    match = re.search(pattern, text, re.DOTALL)
+                    if match:
+                        key_stats = match.group(1)
+                        shared['Key stats'] = key_stats
 
             except Exception as e:
+                shared['Error'] = str(e) + ", please try again if any data is missing.."
                 if os.path.isfile(output_path):
                     os.remove(output_path)
         
@@ -266,6 +275,7 @@ class TickerAnalyzer:
 
             options = {
                 'javascript-delay': '10000',
+                'load-error-handling': 'ignore',
                 'no-stop-slow-scripts': '',
                 'enable-javascript': '',
                 'width': '1280',  # or adjust based on your needs
@@ -273,21 +283,21 @@ class TickerAnalyzer:
 
             config = imgkit.config(wkhtmltoimage='/usr/bin/wkhtmltoimage')
 
-            price_target = multiprocessing.Manager().dict()
+            stats_and_price_target = multiprocessing.Manager().dict()
 
             image_path_ks = 'tv_ks.png'
             image_path_forecast = 'tv_forecast.png'
 
-            process_ks = multiprocessing.Process(target=self._render_imgkit, args=(url, image_path_ks, config, options, (21, 2067, 309, 2583), 'ks'))
-            process_forecast = multiprocessing.Process(target=self._render_imgkit, args=(forecast_url, image_path_forecast, config, options, (19, 654, 199, 732), 'forecast', price_target))
+            process_ks = multiprocessing.Process(target=self._render_imgkit, args=(url, image_path_ks, config, options, (15, 1375, 315, 2600), 'ks', stats_and_price_target))
+            process_forecast = multiprocessing.Process(target=self._render_imgkit, args=(forecast_url, image_path_forecast, config, options, (19, 654, 199, 732), 'forecast', stats_and_price_target))
 
             process_ks.start()
             process_forecast.start()
 
-            process_ks.join(45)
-            process_forecast.join(45)
+            process_ks.join(60)
+            process_forecast.join(60)
 
-            self.summary.update(price_target)
+            self.summary.update(stats_and_price_target)
 
         
         def get_ticker_info(self, ticker: str):
