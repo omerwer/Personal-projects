@@ -14,7 +14,6 @@ import multiprocessing
 import re
 from finvizfinance.quote import finvizfinance
 from g4f.client import Client
-import pandas as pd
 
 class TickerAnalyzer:
     def __init__(self):
@@ -146,7 +145,6 @@ class TickerAnalyzer:
                                 str(k): v for k, v in recent_upgrades_dict.items()
                             }
 
-                            # self.summary.update({"Upgrades & downgrades" : recent_upgrades_dict})
                             self.summary.update({"Upgrades & downgrades" : upgrades})
                         
                     elif attr == 'news':
@@ -239,6 +237,29 @@ class TickerAnalyzer:
                                 "HNX": "Vietnam",             # Hanoi Stock Exchange
                                 "BIST": "Turkey",             # Borsa Istanbul
                             }
+              
+        def _adjust_ks_string(self, ks_string_list, key_stats):
+            index = 2
+            indicators_list = ['TTM', 'indicated', 'FY']
+            while (index < len(ks_string_list) - 1):
+                if ks_string_list[index] == '':
+                    index = index + 1
+                else:
+                    if index == len(ks_string_list) - 1:
+                        key_stats[ks_string_list[index]] = ''
+                        index = index + 1
+                    else:
+                        if any(word in ks_string_list[index] for word in indicators_list) and \
+                        any(word in ks_string_list[index+1] for word in indicators_list):
+                            key_stats[ks_string_list[index]] = ''
+                            index = index + 1
+                        elif ks_string_list[index+1] == '' and \
+                        any(char.isdigit() for char in ks_string_list[index+2]):
+                            key_stats[ks_string_list[index]] = ks_string_list[index+2]
+                            index = index + 3
+                        else:
+                            key_stats[ks_string_list[index]] = ks_string_list[index+1]
+                            index = index + 2
         
         def _render_imgkit(self, url, output_path, config, options, crop_box, str, shared):
             try:
@@ -260,7 +281,14 @@ class TickerAnalyzer:
                     pattern = r"(Key stats.*?(?:Beta \(1Y\)|Expense ratio)[^\d\-]*[-+]?\d*\.?\d+)"
                     match = re.search(pattern, text, re.DOTALL)
                     if match:
-                        key_stats = match.group(1)
+                        key_stats_raw = match.group(1)
+                        key_stats_words = key_stats_raw.split('\n')
+                        for i, word in enumerate(key_stats_words):
+                            key_stats_words[i] = word.replace(' >', '').replace('uso', '').replace(' M', 'M').replace(' B', 'B')
+                        key_stats = {}
+
+                        self._adjust_ks_string(key_stats_words, key_stats)
+
                         shared['Key stats'] = key_stats
 
             except Exception as e:
