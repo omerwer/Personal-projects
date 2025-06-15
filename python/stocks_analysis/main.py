@@ -39,7 +39,7 @@ def root():
     with open("static/index.html", "r") as f:
         return HTMLResponse(content=f.read())
 
-@app.get("/zacks/{ticker}")
+@app.get("/Zacks/{ticker}")
 def zacks(ticker: str):
     summary = ta.get_zacks_info(ticker)
 
@@ -52,7 +52,7 @@ def zacks(ticker: str):
     })
 
 
-@app.get("/tradingview/{ticker}")
+@app.get("/TradingView/{ticker}")
 def tradingview(ticker: str):
     summary = ta.get_tradingview_info(ticker)
 
@@ -61,13 +61,13 @@ def tradingview(ticker: str):
     })
 
 
-@app.get("/yahoofinance/{ticker}")
+@app.get("/YahooFinance/{ticker}")
 def zacks(ticker: str):
     summary = ta.get_yf_info(ticker)
     return JSONResponse({"summary": sanitize_for_json(summary)})
 
 
-@app.get("/finviz/{ticker}")
+@app.get("/Finviz/{ticker}")
 def finviz(ticker: str):
     summary = ta.get_finviz_info(ticker)
     return JSONResponse({"summary": sanitize_for_json(summary)})
@@ -82,7 +82,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-@app.post("/chatgpt/{ticker}")
+@app.post("/ChatGPT/{ticker}")
 async def chatgpt(ticker: str, request: Request):
     try:
         data = await request.json()

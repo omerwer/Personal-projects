@@ -1,89 +1,196 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+  <meta charset="UTF-8" />
   <title>Stock Analyzer</title>
-  <style>
-    body { font-family: sans-serif; padding: 20px; }
-    input, textarea { margin-bottom: 10px; width: 100%; }
-    img { max-width: 600px; margin-top: 20px; border: 1px solid #ccc; }
-    pre { background: #f0f0f0; padding: 10px; white-space: pre-wrap; }
-  </style>
+  <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body>
-  <h1>Stock Analyzer</h1>
+<body class="bg-gray-50 text-gray-800">
+  <div class="max-w-3xl mx-auto p-6">
+    <h1 class="text-3xl font-bold mb-6 text-center text-blue-700">📈 Stock Analyzer</h1>
 
-  <input id="ticker" placeholder="Ticker (e.g. AAPL)" />
+    <div class="mb-4">
+      <label for="ticker" class="block text-sm font-medium text-gray-700">Ticker Symbol</label>
+      <input id="ticker" placeholder="e.g., AAPL" class="mt-1 p-2 w-full border rounded shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
+    </div>
 
-  <div id="buttons">
-    <button onclick="fetchData('zacks')">Zacks</button>
-    <button onclick="fetchData('tradingview')">TradingView</button>
-    <button onclick="fetchData('yahoofinance')">Yahoo Finance</button>
-    <button onclick="fetchData('finviz')">Finviz</button>
-    <button onclick="prepareChatPrompt()">ChatGPT</button>
+    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 mb-4">
+      <button class="bg-blue-600 hover:bg-blue-700 text-white py-2 rounded" onclick="fetchData('Zacks')">Zacks</button>
+      <button class="bg-green-600 hover:bg-green-700 text-white py-2 rounded" onclick="fetchData('TradingView')">TradingView</button>
+      <button class="bg-purple-600 hover:bg-purple-700 text-white py-2 rounded" onclick="fetchData('YahooFinance')">Yahoo Finance</button>
+      <button class="bg-yellow-600 hover:bg-yellow-700 text-white py-2 rounded" onclick="fetchData('Finviz')">Finviz</button>
+      <button class="bg-gray-700 hover:bg-gray-800 text-white py-2 rounded" onclick="prepareChatPrompt()">ChatGPT</button>
+    </div>
+
+    <div id="chatgpt-prompt" class="mb-4 hidden">
+      <textarea id="prompt" rows="4" class="w-full p-2 border rounded shadow-sm" placeholder=""></textarea>
+      <button class="mt-2 bg-indigo-600 hover:bg-indigo-700 text-white py-2 px-4 rounded" onclick="sendChatPrompt()">Submit Prompt</button>
+    </div>
+
+    <div class="mt-4">
+      <pre id="output" class="bg-white p-4 border rounded shadow overflow-auto max-h-[400px]"></pre>
+      <img id="result-img" class="mt-4 max-w-full rounded shadow hidden" />
+    </div>
   </div>
-
-  <!-- Hidden initially -->
-  <div id="chatgpt-prompt" style="display: none; margin-top: 10px;">
-    <textarea id="prompt" rows="4" placeholder=""></textarea>
-    <br />
-    <button onclick="sendChatPrompt()">Submit Prompt</button>
-  </div>
-
-  <pre id="output"></pre>
-  <img id="result-img" src="" style="display: none;" />
 
   <script>
+    async function fetchData(source) {
+      const t = document.getElementById('ticker').value.trim();
+      if (!t) return alert('Enter ticker');
+
+      const output = document.getElementById('output');
+      output.innerHTML = `<div class="text-gray-500">Fetching data from ${source.charAt(0).toUpperCase() + source.slice(1)}...</div>`;
+      document.getElementById('chatgpt-prompt').classList.add('hidden');
+      document.getElementById('result-img').classList.add('hidden');
+
+      try {
+        const res = await fetch(`/${source}/${t}`);
+        if (!res.ok) throw new Error(`Error fetching ${source}: ${res.statusText}`);
+
+        const data = await res.json();
+        const s = data.summary;
+        output.innerHTML = '';
+
+        function renderFields(obj, level = 0) {
+          if (typeof obj === 'string' || typeof obj === 'number' || typeof obj === 'boolean') {
+            return `<div class="ml-${level * 2}">${obj}</div>`;
+          } else if (Array.isArray(obj)) {
+            return obj.map(item => `<div class="ml-${level * 2}">${renderFields(item, level + 1)}</div>`).join('');
+          } else if (typeof obj === 'object' && obj !== null) {
+            return Object.entries(obj)
+              .map(([k, v]) => {
+                if (typeof v === 'object' && v !== null) {
+                  return `
+                    <div class="mt-3 font-semibold text-gray-800">${k}:</div>
+                    <div class="ml-4 space-y-0.5">${renderFields(v, level + 1)}</div>
+                  `;
+                }
+                return `<div class="ml-${level * 2}"><span class="font-medium text-gray-700">${k}:</span> ${v}</div>`;
+              })
+              .join('');
+          }
+          return '';
+        }
+
+        function renderCard(title, fields) {
+          return `
+            <div class="bg-white border border-gray-300 rounded-lg shadow p-4 mb-4">
+              ${title ? `<h2 class="text-xl font-semibold text-blue-900 mb-2">${title}</h2>` : ''}
+              <div class="space-y-2">${renderFields(fields)}</div>
+            </div>
+          `;
+        }
+
+        let html = '';
+        if (s) {
+          if (source === 'zacks') {
+            html += renderCard(`${s.name || ''} (${s.ticker || ''})`, {
+              'Zacks Rank': s['zacks rank'],
+              'Forward P/E': s['Forward P/E'],
+              'Dividend Yield': s['dividend_yield'],
+              'Dividend Frequency': s['dividend_freq'],
+              'Dividend': s['dividend'],
+            });
+          } else {
+            html += renderCard(source.charAt(0).toUpperCase() + source.slice(1), s);
+          }
+        } else {
+          html = `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+        }
+
+        output.innerHTML = html;
+
+        const img = document.getElementById('result-img');
+        if (data.image_url) {
+          img.src = data.image_url;
+          img.classList.remove('hidden');
+        } else {
+          img.classList.add('hidden');
+        }
+      } catch (error) {
+        output.innerHTML = `<div class="text-red-600 font-semibold">Error: ${error.message}</div>`;
+        document.getElementById('chatgpt-prompt').classList.add('hidden');
+        document.getElementById('result-img').classList.add('hidden');
+      }
+    }
+
     function prepareChatPrompt() {
       const ticker = document.getElementById('ticker').value.trim();
       if (!ticker) return alert('Enter ticker');
 
-      const example = `Example for prompt: please provide stock analysis for ${ticker.toUpperCase()} (ticker ${ticker.toLowerCase()})`;
-      document.getElementById('prompt').placeholder = example;
-      document.getElementById('prompt').value = '';
-      document.getElementById('chatgpt-prompt').style.display = 'block';
-      document.getElementById('output').textContent = 'Enter your prompt and click "Submit Prompt"...';
+      const example = `Example prompt: Please provide stock analysis for ${ticker.toUpperCase()} (ticker ${ticker.toLowerCase()})`;
+      const promptElem = document.getElementById('prompt');
+      promptElem.placeholder = example;
+      promptElem.value = '';
+
+      document.getElementById('chatgpt-prompt').classList.remove('hidden');
+      document.getElementById('output').innerHTML = `<div class="text-gray-500">Enter your prompt and click "Submit Prompt"...</div>`;
+      document.getElementById('result-img').classList.add('hidden');
     }
 
     async function sendChatPrompt() {
       const ticker = document.getElementById('ticker').value.trim();
       const prompt = document.getElementById('prompt').value.trim();
+      const output = document.getElementById('output');
 
       if (!ticker || !prompt) return alert('Enter both ticker and prompt.');
 
-      const res = await fetch(`/chatgpt/${ticker}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt })
-      });
+      output.innerHTML = `<div class="text-gray-500">Loading ChatGPT response...</div>`;
 
-      const data = await res.json();
-      if (res.ok) {
-        document.getElementById('output').textContent = JSON.stringify(data.summary, null, 2);
-      } else {
-        document.getElementById('output').textContent = `Error: ${data.error}`;
+      try {
+        const res = await fetch(`/ChatGPT/${ticker}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prompt })
+        });
+
+        if (!res.ok) {
+          const errData = await res.json();
+          throw new Error(errData.error || 'Unknown error');
+        }
+
+        const data = await res.json();
+        const summary = data.summary;
+
+        function renderFields(obj, level = 0) {
+          if (typeof obj === 'string' || typeof obj === 'number' || typeof obj === 'boolean') {
+            return `<div class="ml-${level * 2}">${obj}</div>`;
+          } else if (Array.isArray(obj)) {
+            return obj.map(item => `<div class="ml-${level * 2}">${renderFields(item, level + 1)}</div>`).join('');
+          } else if (typeof obj === 'object' && obj !== null) {
+            return Object.entries(obj)
+              .map(([k, v]) => {
+                if (typeof v === 'object' && v !== null) {
+                  return `
+                    <div class="mt-3 font-semibold text-gray-800">${k}:</div>
+                    <div class="ml-4 space-y-0.5">${renderFields(v, level + 1)}</div>
+                  `;
+                }
+                return `<div class="ml-${level * 2}"><span class="font-medium text-gray-700">${k}:</span> ${v}</div>`;
+              })
+              .join('');
+          }
+          return '';
+        }
+
+        function renderCard(title, fields) {
+          return `
+            <div class="bg-white border border-gray-300 rounded-lg shadow p-4 mb-4">
+              ${title ? `<h2 class="text-xl font-semibold text-blue-900 mb-2">${title}</h2>` : ''}
+              <div class="space-y-2">${renderFields(fields)}</div>
+            </div>
+          `;
+        }
+
+        output.innerHTML = renderCard("ChatGPT Analysis", summary);
+        document.getElementById('chatgpt-prompt').classList.add('hidden');
+        document.getElementById('result-img').classList.add('hidden');
+
+      } catch (error) {
+        output.innerHTML = `<div class="text-red-600 font-semibold">Error: ${error.message}</div>`;
+        document.getElementById('chatgpt-prompt').classList.add('hidden');
+        document.getElementById('result-img').classList.add('hidden');
       }
-
-      // Optionally hide prompt box after submission
-      // document.getElementById('chatgpt-prompt').style.display = 'none';
-    }
-
-    async function fetchData(source) {
-      const t = document.getElementById('ticker').value.trim();
-      if (!t) return alert('Enter ticker');
-
-      const res = await fetch(`/${source}/${t}`);
-      const data = await res.json();
-      document.getElementById('output').textContent = JSON.stringify(data.summary || data, null, 2);
-
-      if (data.image_url) {
-        document.getElementById('result-img').src = data.image_url;
-        document.getElementById('result-img').style.display = 'block';
-      } else {
-        document.getElementById('result-img').style.display = 'none';
-      }
-
-      // Hide ChatGPT prompt if another source is selected
-      document.getElementById('chatgpt-prompt').style.display = 'none';
     }
   </script>
 </body>

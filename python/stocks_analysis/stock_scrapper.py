@@ -165,7 +165,6 @@ class TickerAnalyzer:
             except Exception as e:
                 self.summary = {"msg" : "Ticker doesn't exist. Please provide a valid stock ticker."}
                 
-            print(self.summary)
             return self.summary
     
     
