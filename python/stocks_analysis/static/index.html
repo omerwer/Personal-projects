@@ -4,31 +4,52 @@
   <meta charset="UTF-8" />
   <title>Stock Analyzer</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          keyframes: {
+            fadeIn: {
+              '0%': { opacity: 0 },
+              '100%': { opacity: 1 }
+            }
+          },
+          animation: {
+            fadeIn: 'fadeIn 0.5s ease-in-out'
+          }
+        },
+        plugins: [tailwindTypography],
+      }
+    }
+  </script>
+  <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
 </head>
-<body class="bg-gray-50 text-gray-800">
+<body class="bg-gray-100 text-gray-800">
   <div class="max-w-3xl mx-auto p-6">
-    <h1 class="text-3xl font-bold mb-6 text-center text-blue-700">📈 Stock Analyzer</h1>
+    <h1 class="text-4xl font-bold mb-6 text-center text-blue-700 flex justify-center items-center gap-2">
+      <span>📊</span><span>Stock Analyzer</span>
+    </h1>
 
     <div class="mb-4">
-      <label for="ticker" class="block text-sm font-medium text-gray-700">Ticker Symbol</label>
-      <input id="ticker" placeholder="e.g., AAPL" class="mt-1 p-2 w-full border rounded shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
+      <label for="ticker" class="block text-sm font-semibold text-gray-700">Ticker Symbol</label>
+      <input id="ticker" placeholder="e.g., AAPL" class="mt-1 p-3 w-full border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
     </div>
 
-    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 mb-4">
-      <button class="bg-blue-600 hover:bg-blue-700 text-white py-2 rounded" onclick="fetchData('Zacks')">Zacks</button>
-      <button class="bg-green-600 hover:bg-green-700 text-white py-2 rounded" onclick="fetchData('TradingView')">TradingView</button>
-      <button class="bg-purple-600 hover:bg-purple-700 text-white py-2 rounded" onclick="fetchData('YahooFinance')">Yahoo Finance</button>
-      <button class="bg-yellow-600 hover:bg-yellow-700 text-white py-2 rounded" onclick="fetchData('Finviz')">Finviz</button>
-      <button class="bg-gray-700 hover:bg-gray-800 text-white py-2 rounded" onclick="prepareChatPrompt()">ChatGPT</button>
+    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 mb-6 text-sm font-semibold">
+      <button class="bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg shadow flex items-center justify-center gap-1" onclick="fetchData('Zacks')">📘 Zacks</button>
+      <button class="bg-green-600 hover:bg-green-700 text-white py-2 rounded-lg shadow flex items-center justify-center gap-1" onclick="fetchData('TradingView')">📗 TradingView</button>
+      <button class="bg-purple-600 hover:bg-purple-700 text-white py-2 rounded-lg shadow flex items-center justify-center gap-1" onclick="fetchData('YahooFinance')">🟣 Yahoo Finance</button>
+      <button class="bg-yellow-600 hover:bg-yellow-700 text-white py-2 rounded-lg shadow flex items-center justify-center gap-1" onclick="fetchData('Finviz')">🟡 Finviz</button>
+      <button class="bg-gray-800 hover:bg-gray-900 text-white py-2 rounded-lg shadow flex items-center justify-center gap-1" onclick="prepareChatPrompt()">🤖 ChatGPT</button>
     </div>
 
-    <div id="chatgpt-prompt" class="mb-4 hidden">
-      <textarea id="prompt" rows="4" class="w-full p-2 border rounded shadow-sm" placeholder=""></textarea>
-      <button class="mt-2 bg-indigo-600 hover:bg-indigo-700 text-white py-2 px-4 rounded" onclick="sendChatPrompt()">Submit Prompt</button>
+    <div id="chatgpt-prompt" class="mb-4 hidden animate-fadeIn">
+      <textarea id="prompt" rows="4" class="w-full p-3 border rounded-lg shadow-sm" placeholder=""></textarea>
+      <button class="mt-2 bg-indigo-600 hover:bg-indigo-700 text-white py-2 px-4 rounded-lg shadow" onclick="sendChatPrompt()">Submit Prompt</button>
     </div>
 
     <div class="mt-4">
-      <pre id="output" class="bg-white p-4 border rounded shadow overflow-auto max-h-[400px]"></pre>
+      <div id="output" class="bg-white p-4 border rounded-lg shadow overflow-auto max-h-[500px] space-y-3 text-sm font-mono"></div>
       <img id="result-img" class="mt-4 max-w-full rounded shadow hidden" />
     </div>
   </div>
@@ -39,14 +60,13 @@
       if (!t) return alert('Enter ticker');
 
       const output = document.getElementById('output');
-      output.innerHTML = `<div class="text-gray-500">Fetching data from ${source.charAt(0).toUpperCase() + source.slice(1)}...</div>`;
+      output.innerHTML = `<div class="text-blue-500 animate-pulse">🔄 Fetching data from ${source}...</div>`;
       document.getElementById('chatgpt-prompt').classList.add('hidden');
       document.getElementById('result-img').classList.add('hidden');
 
       try {
         const res = await fetch(`/${source}/${t}`);
         if (!res.ok) throw new Error(`Error fetching ${source}: ${res.statusText}`);
-
         const data = await res.json();
         const s = data.summary;
         output.innerHTML = '';
@@ -57,33 +77,27 @@
           } else if (Array.isArray(obj)) {
             return obj.map(item => `<div class="ml-${level * 2}">${renderFields(item, level + 1)}</div>`).join('');
           } else if (typeof obj === 'object' && obj !== null) {
-            return Object.entries(obj)
-              .map(([k, v]) => {
-                if (typeof v === 'object' && v !== null) {
-                  return `
-                    <div class="mt-3 font-semibold text-gray-800">${k}:</div>
-                    <div class="ml-4 space-y-0.5">${renderFields(v, level + 1)}</div>
-                  `;
-                }
-                return `<div class="ml-${level * 2}"><span class="font-medium text-gray-700">${k}:</span> ${v}</div>`;
-              })
-              .join('');
+            return Object.entries(obj).map(([k, v]) => {
+              if (typeof v === 'object' && v !== null) {
+                return `<div class="mt-2 font-semibold text-gray-800">${k}:</div>
+                        <div class="ml-4 space-y-0.5">${renderFields(v, level + 1)}</div>`;
+              }
+              return `<div class="ml-${level * 2}"><span class="font-medium text-gray-700">${k}:</span> ${v}</div>`;
+            }).join('');
           }
           return '';
         }
 
         function renderCard(title, fields) {
-          return `
-            <div class="bg-white border border-gray-300 rounded-lg shadow p-4 mb-4">
-              ${title ? `<h2 class="text-xl font-semibold text-blue-900 mb-2">${title}</h2>` : ''}
-              <div class="space-y-2">${renderFields(fields)}</div>
-            </div>
-          `;
+          return `<div class="bg-white border border-gray-300 rounded-lg shadow-md p-4 mb-4 animate-fadeIn">
+                    ${title ? `<h2 class="text-lg font-semibold text-blue-900 mb-2">${title}</h2>` : ''}
+                    <div class="space-y-2">${renderFields(fields)}</div>
+                  </div>`;
         }
 
         let html = '';
         if (s) {
-          if (source === 'zacks') {
+          if (source.toLowerCase() === 'zacks') {
             html += renderCard(`${s.name || ''} (${s.ticker || ''})`, {
               'Zacks Rank': s['zacks rank'],
               'Forward P/E': s['Forward P/E'],
@@ -107,8 +121,9 @@
         } else {
           img.classList.add('hidden');
         }
+
       } catch (error) {
-        output.innerHTML = `<div class="text-red-600 font-semibold">Error: ${error.message}</div>`;
+        output.innerHTML = `<div class="text-red-600 font-semibold">❌ Error: ${error.message}</div>`;
         document.getElementById('chatgpt-prompt').classList.add('hidden');
         document.getElementById('result-img').classList.add('hidden');
       }
@@ -118,14 +133,34 @@
       const ticker = document.getElementById('ticker').value.trim();
       if (!ticker) return alert('Enter ticker');
 
-      const example = `Example prompt: Please provide stock analysis for ${ticker.toUpperCase()} (ticker ${ticker.toLowerCase()})`;
+      const example = `Example prompt: Provide a stock analysis for ${ticker.toUpperCase()} (ticker ${ticker.toLowerCase()})`;
       const promptElem = document.getElementById('prompt');
       promptElem.placeholder = example;
       promptElem.value = '';
 
       document.getElementById('chatgpt-prompt').classList.remove('hidden');
-      document.getElementById('output').innerHTML = `<div class="text-gray-500">Enter your prompt and click "Submit Prompt"...</div>`;
+      document.getElementById('output').innerHTML = `<div class="text-gray-500">🧠 Enter your prompt and click "Submit Prompt"...</div>`;
       document.getElementById('result-img').classList.add('hidden');
+    }
+
+    function convertToHtml(text) {
+      return text
+        // ### becomes h2 (bigger heading)
+        .replace(/^### (.*)$/gim, '<h2 class="text-xl font-bold mt-4">$1</h2>')
+        // ## becomes h3 (smaller heading)
+        .replace(/^## (.*)$/gim, '<h3 class="text-lg font-semibold mt-4">$1</h3>')
+        // # becomes h1 (largest heading)
+        .replace(/^# (.*)$/gim, '<h1 class="text-2xl font-extrabold mt-4">$1</h1>')
+        // Lines starting with number dot + bold text become h3 or h4
+        .replace(/^\s*\d+\.\s+\*\*(.+?)\*\*\s*$/gm, '<h3 class="text-lg font-semibold mt-2">$1</h3>')
+        // Bold text anywhere
+        .replace(/\*\*(.*?)\*\*/gim, '<strong>$1</strong>')
+        // Italic text anywhere
+        .replace(/\*(.*?)\*/gim, '<em>$1</em>')
+        // Links
+        .replace(/\[([^\]]+)\]\(([^)]+)\)/gim, '<a class="text-blue-600 underline" href="$2" target="_blank">$1</a>')
+        // line breaks
+        .replace(/\n/g, '<br>');
     }
 
     async function sendChatPrompt() {
@@ -135,7 +170,7 @@
 
       if (!ticker || !prompt) return alert('Enter both ticker and prompt.');
 
-      output.innerHTML = `<div class="text-gray-500">Loading ChatGPT response...</div>`;
+      output.innerHTML = `<div class="text-gray-500">💬 Loading ChatGPT response...</div>`;
 
       try {
         const res = await fetch(`/ChatGPT/${ticker}`, {
@@ -152,21 +187,57 @@
         const data = await res.json();
         const summary = data.summary;
 
+        // Function to convert markdown-like text into nested HTML with headings
+        function markdownToHtml(text) {
+          if (!text) return '';
+
+          // Replace main headings (###, ##, #) - larger to smaller
+          text = text
+            .replace(/^### (.*)$/gm, '<h2 class="text-xl font-bold mt-6 mb-2">$1</h2>')
+            .replace(/^## (.*)$/gm, '<h3 class="text-lg font-semibold mt-5 mb-1">$1</h3>')
+            .replace(/^# (.*)$/gm, '<h1 class="text-2xl font-extrabold mt-7 mb-3">$1</h1>');
+
+          // Replace numbered bold list items like "10. **Risk Factors**" as sub-headings
+          // This regex finds lines starting with digits and dot + space + **text**
+          text = text.replace(
+            /^(\d+)\.\s+\*\*(.+)\*\*/gm,
+            (_, num, heading) =>
+              `<h4 class="text-md font-semibold mt-3 mb-1">${num}. ${heading}</h4>`
+          );
+
+          // Convert **bold** and *italic*
+          text = text
+            .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+            .replace(/\*(.+?)\*/g, '<em>$1</em>');
+
+          // Convert links [text](url)
+          text = text.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a class="text-blue-600 underline" href="$2" target="_blank">$1</a>');
+
+          // Replace newlines with <br> for line breaks
+          text = text.replace(/\n/g, '<br>');
+
+          return text;
+        }
+
         function renderFields(obj, level = 0) {
           if (typeof obj === 'string' || typeof obj === 'number' || typeof obj === 'boolean') {
-            return `<div class="ml-${level * 2}">${obj}</div>`;
+            // Apply markdown to HTML conversion on string values
+            if (typeof obj === 'string') {
+              return `<div class="ml-${level * 4}" style="white-space: pre-wrap;">${markdownToHtml(obj)}</div>`;
+            }
+            return `<div class="ml-${level * 4}">${obj}</div>`;
           } else if (Array.isArray(obj)) {
-            return obj.map(item => `<div class="ml-${level * 2}">${renderFields(item, level + 1)}</div>`).join('');
+            return obj.map(item => `<div class="ml-${level * 4}">${renderFields(item, level + 1)}</div>`).join('');
           } else if (typeof obj === 'object' && obj !== null) {
             return Object.entries(obj)
               .map(([k, v]) => {
                 if (typeof v === 'object' && v !== null) {
-                  return `
-                    <div class="mt-3 font-semibold text-gray-800">${k}:</div>
-                    <div class="ml-4 space-y-0.5">${renderFields(v, level + 1)}</div>
-                  `;
+                  return `<div class="mt-3 font-semibold text-gray-800 ml-${level * 4}">${k}:</div>
+                          <div class="ml-${(level + 1) * 4} space-y-1">${renderFields(v, level + 1)}</div>`;
                 }
-                return `<div class="ml-${level * 2}"><span class="font-medium text-gray-700">${k}:</span> ${v}</div>`;
+                // If value is string, convert markdown too
+                const valueHtml = (typeof v === 'string') ? markdownToHtml(v) : v;
+                return `<div class="ml-${level * 4}"><span class="font-medium text-gray-700">${k}:</span> ${valueHtml}</div>`;
               })
               .join('');
           }
@@ -175,9 +246,9 @@
 
         function renderCard(title, fields) {
           return `
-            <div class="bg-white border border-gray-300 rounded-lg shadow p-4 mb-4">
-              ${title ? `<h2 class="text-xl font-semibold text-blue-900 mb-2">${title}</h2>` : ''}
-              <div class="space-y-2">${renderFields(fields)}</div>
+            <div class="bg-white border border-gray-300 rounded-lg shadow p-4 mb-4 animate-fadeIn max-w-full overflow-auto">
+              ${title ? `<h2 class="text-2xl font-bold text-blue-900 mb-4">${title}</h2>` : ''}
+              <div class="space-y-3">${renderFields(fields)}</div>
             </div>
           `;
         }
@@ -187,7 +258,7 @@
         document.getElementById('result-img').classList.add('hidden');
 
       } catch (error) {
-        output.innerHTML = `<div class="text-red-600 font-semibold">Error: ${error.message}</div>`;
+        output.innerHTML = `<div class="text-red-600 font-semibold">❌ Error: ${error.message}</div>`;
         document.getElementById('chatgpt-prompt').classList.add('hidden');
         document.getElementById('result-img').classList.add('hidden');
       }

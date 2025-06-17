@@ -260,7 +260,7 @@ class TickerAnalyzer:
                             key_stats[ks_string_list[index]] = ks_string_list[index+1]
                             index = index + 2
         
-        def _render_imgkit(self, url, output_path, config, options, crop_box, str, shared):
+        def _render_imgkit(self, url, output_path, config, options, crop_box, str, shared, analysis=None):
             try:
                 imgkit.from_url(url, output_path, config=config, options=options)
 
@@ -272,7 +272,11 @@ class TickerAnalyzer:
                     match = re.search(r"\d+\.\d+", text)
                     if match:
                         price_target = float(match.group())
+                        last_price = float(analysis.indicators['close'])
+                        shared['Last closing price'] = last_price
                         shared['Price target'] = price_target
+                        potential =  round((((price_target - last_price) / last_price) * 100), 2)
+                        shared['Potential %'] = f'{potential}%'
 
                 else:
                     text = pytesseract.image_to_string(cropped_img)
@@ -291,11 +295,11 @@ class TickerAnalyzer:
                         shared['Key stats'] = key_stats
 
             except Exception as e:
-                shared['Error'] = str(e) + ", please try again if any data is missing.."
+                print(f'{e}, , please try again if any data is missing...')
                 if os.path.isfile(output_path):
                     os.remove(output_path)
         
-        def _get_tv_stats_from_image(self, ticker: str, exchange: str):
+        def _get_tv_stats_from_image(self, ticker: str, exchange: str, analysis: dict):
             url = f'https://www.tradingview.com/symbols/{exchange}-{ticker}/'
             forecast_url = url + 'forecast/'
 
@@ -315,7 +319,7 @@ class TickerAnalyzer:
             image_path_forecast = 'tv_forecast.png'
 
             process_ks = multiprocessing.Process(target=self._render_imgkit, args=(url, image_path_ks, config, options, (15, 1375, 315, 2600), 'ks', stats_and_price_target))
-            process_forecast = multiprocessing.Process(target=self._render_imgkit, args=(forecast_url, image_path_forecast, config, options, (19, 654, 199, 732), 'forecast', stats_and_price_target))
+            process_forecast = multiprocessing.Process(target=self._render_imgkit, args=(forecast_url, image_path_forecast, config, options, (19, 654, 199, 732), 'forecast', stats_and_price_target, analysis))
 
             process_ks.start()
             process_forecast.start()
@@ -339,7 +343,7 @@ class TickerAnalyzer:
 
                     analysis = handler.get_analysis()
 
-                    self._get_tv_stats_from_image(self.ticker, ex)
+                    self._get_tv_stats_from_image(self.ticker, ex, analysis)
 
                     self.summary.update({'Analysis' : analysis.summary})
 
