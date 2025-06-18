@@ -160,10 +160,11 @@ class TickerAnalyzer:
 
                                 recent_news_list.append(news['content'])
 
+
                         self.summary.update({'News' : recent_news_list})
-            
+        
             except Exception as e:
-                self.summary = {"msg" : "Ticker doesn't exist. Please provide a valid stock ticker."}
+                self.summary = {"msg" : f"{e}. Please provide a valid stock ticker."}
                 
             return self.summary
     
@@ -374,48 +375,62 @@ class TickerAnalyzer:
 
                 self.summary.update({'General info' : data['fundament']})
 
-                upgrade_downgrade_list = list()
                 curr_date = datetime.now()
 
-                for key, rating in data['ratings_outer'].to_dict(orient='index').items():
-                    updgrade_downgrade_year = int(rating['Date'].year)
+                upgrades_dict = data['ratings_outer'].to_dict(orient='index')
+                recent_upgrades_dict = {}
+                for key, values in upgrades_dict.items():
+                    date = values.pop('Date')
+                    updgrade_downgrade_year = int(date.year)
                     if updgrade_downgrade_year >= curr_date.year - 1:
-                        upgrade_downgrade_list.append(rating)
+                        recent_upgrades_dict.update({date : values})
 
                 upgrades = {
-                    str(v) for v in upgrade_downgrade_list
+                    str(k): v for k, v in recent_upgrades_dict.items()
                 }
 
-                self.summary.update({'Upgrades/Downgrades' : list(upgrades)})
+                self.summary.update({'Upgrades/Downgrades' : upgrades})
 
-                news_list = list()
-
-                for key, news in data['news'].to_dict(orient='index').items():
-                    news_year = news['Date'].year
-                    news_month = news['Date'].month
-                    news_day = news['Date'].day
+                news_dict = data['news'].to_dict(orient='index')
+                recent_news_dict = {}
+                
+                for key, news in news_dict.items():
+                    print(news)
+                    date = news.pop('Date')
+                    news_year = date.year
+                    news_month = date.month
+                    news_day = date.day
 
                     if ((int(news_year) == curr_date.year and int(news_month) == curr_date.month and abs(int(news_day) - curr_date.day) <= 3) or 
                         (int(news_month) == curr_date.month - 1 and abs(curr_date.day -  int(news_day)) > 28) or
                         (int(news_year) == curr_date.year - 1 and news_month == 12 and abs(curr_date.day -  int(news_day)) > 28)):
-                            news_list.append(news)
+                            recent_news_dict.update({date : news})
 
-                recent_news = {
-                    str(v) for v in news_list
+                news = {
+                    str(k): v for k, v in recent_news_dict.items()
                 }
-                
-                self.summary.update({'News' : list(recent_news)})
 
-                insiders_list = list()
+                self.summary.update({'News' : news})
+
+                # insiders_list = list()
+                insiders_dict = {}
 
                 for key, insider in stock.ticker_inside_trader().to_dict(orient='index').items():
                     if str(curr_date.year)[-2:] in insider['Date'] or str(int(curr_date.year)-1)[-2:] in insider['Date']:
-                        insiders_list.append(insider)
+                        insider_name = insider.pop('Insider Trading')
+                        # insiders_list.append(insider)
+                        insiders_dict.update({insider_name : insider})
 
-                self.summary.update({'Insiders trading' : list(insiders_list)})
+                # self.summary.update({'Insiders trading' : list(insiders_list)})
+
+                insiders = {
+                    str(k): v for k, v in insiders_dict.items()
+                }
+
+                self.summary.update({'Insiders trading' : insiders})
             
-            except:
-                self.summary = {"msg" : "Ticker doesn't exist. Please provide a valid stock ticker"}
+            except Exception as e:
+                self.summary = {"msg" : f"{e}. Please provide a valid stock ticker"}
 
             return self.summary
         

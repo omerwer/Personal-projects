@@ -33,7 +33,6 @@ def sanitize_for_json(obj):
         return obj
     return obj
 
-
 @app.get("/")
 def root():
     with open("static/index.html", "r") as f:
