@@ -1,12 +1,9 @@
 #!/usr/bin/env python3
 
-import readline
-
 from stock_scrapper import TickerAnalyzer
 from fastapi import FastAPI
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
-import os
 import urllib3
 from fastapi import Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -72,10 +69,9 @@ def finviz(ticker: str):
     return JSONResponse({"summary": sanitize_for_json(summary)})
 
 
-# CORS to allow frontend requests
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Change to your frontend's origin in production
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -89,7 +85,6 @@ async def chatgpt(ticker: str, request: Request):
         if not prompt:
             return JSONResponse(status_code=400, content={"error": "Prompt is required."})
 
-        # Get the summary from your Chatgpt class logic
         summary = ta.get_chatgpt_info(ticker, prompt)
         return JSONResponse({"summary": sanitize_for_json(summary)})
 
