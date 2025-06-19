@@ -97,7 +97,7 @@ class TickerAnalyzer:
                 self.summary = data_dict
             
             except Exception as e:
-                self.summary = {"msg" : "Ticker doesn't exist. Please provide a valid stock ticker."}
+                self.summary = {"msg" : f"{e}. Please provide a valid stock ticker."}
 
             return self.summary
                 
@@ -148,20 +148,27 @@ class TickerAnalyzer:
                             self.summary.update({"Upgrades & downgrades" : upgrades})
                         
                     elif attr == 'news':
-                        recent_news_list = []
+                        recent_news_dict = {}
                         for news in getattr(self.ticker, attr):
+                            content = news['content']
                             curr_date = datetime.now()
-                            year, month, _ = news['content']['pubDate'].split('-')
+                            year, month, _ = content['pubDate'].split('-')
                             if (int(year) == curr_date.year or (int(year) == curr_date.year - 1 and abs(curr_date.month -  int(month)) > 6)):
                                 for key in ['id', 'description', 'displayTime', 'isHosted', 
                                             'bypassModal', 'previewUrl', 'thumbnail', 'provider', 
                                             'clickThroughUrl', 'metadata', 'finance', 'storyline']:
-                                    _ = news['content'].pop(key)
+                                    _ = content.pop(key)
 
-                                recent_news_list.append(news['content'])
+                                content_type = content.pop('contentType')
+                                raw_url_data = content.pop('canonicalUrl')
+                                content['url'] = raw_url_data['url']
+                                recent_news_dict.update({content_type : content})
 
 
-                        self.summary.update({'News' : recent_news_list})
+                        news = {
+                            str(k): v for k, v in recent_news_dict.items()
+                        }
+                        self.summary.update({'News' : news})
         
             except Exception as e:
                 self.summary = {"msg" : f"{e}. Please provide a valid stock ticker."}
@@ -296,7 +303,7 @@ class TickerAnalyzer:
                         shared['Key stats'] = key_stats
 
             except Exception as e:
-                print(f'{e}, , please try again if any data is missing...')
+                print(f"{e}, , please try again if any data is missing...")
                 if os.path.isfile(output_path):
                     os.remove(output_path)
         
@@ -395,7 +402,6 @@ class TickerAnalyzer:
                 recent_news_dict = {}
                 
                 for key, news in news_dict.items():
-                    print(news)
                     date = news.pop('Date')
                     news_year = date.year
                     news_month = date.month
@@ -412,16 +418,12 @@ class TickerAnalyzer:
 
                 self.summary.update({'News' : news})
 
-                # insiders_list = list()
                 insiders_dict = {}
 
                 for key, insider in stock.ticker_inside_trader().to_dict(orient='index').items():
                     if str(curr_date.year)[-2:] in insider['Date'] or str(int(curr_date.year)-1)[-2:] in insider['Date']:
                         insider_name = insider.pop('Insider Trading')
-                        # insiders_list.append(insider)
                         insiders_dict.update({insider_name : insider})
-
-                # self.summary.update({'Insiders trading' : list(insiders_list)})
 
                 insiders = {
                     str(k): v for k, v in insiders_dict.items()
