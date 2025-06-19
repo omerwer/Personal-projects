@@ -56,12 +56,12 @@ Always conduct your own research and consult a licensed financial advisor before
 
 ## 📁 Project Structure
 
-├── main.py # FastAPI backend
-├── static/
-│ ├── index.html # Main frontend page
-│ ├── images/ # Zacks image assets (e.g., style scores)
-│ └── ... # CSS/JS if separated later
-└── stock_scrapper.py # Your custom class for fetching data
+├── main.py # FastAPI backend </br>
+├── static/</br>
+│ ├── index.html # Main frontend page </br>
+│ ├── images/ # Zacks image assets (e.g., style scores) </br>
+│ └── ... # CSS/JS if separated later </br>
+└── stock_scrapper.py # Your custom class for fetching data </br>
 
 ## 🛠️ Setup Instructions
 
