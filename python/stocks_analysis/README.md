@@ -27,7 +27,7 @@ Always conduct your own research and consult a licensed financial advisor before
 
 ## 🚀 Features
 
-- 🔍 Lookup a stock ticker across:
+- 🔍 Lookup a stock **ticker** (actual name of the company will not work) across:
   - Zacks
   - TradingView
   - Yahoo Finance
@@ -41,16 +41,35 @@ Always conduct your own research and consult a licensed financial advisor before
 
 ## 🧩 Tech Stack
 
-- **Backend:** [FastAPI](https://fastapi.tiangolo.com/)
-- **Frontend:** HTML + JavaScript + TailwindCSS
-- **Data Parsing:** Custom `TickerAnalyzer` class (from `stock_scrapper.py`)
-- **Markdown Rendering:** Custom `markdownToHtml()` function
+### 🔙 Backend
+
+- **FastAPI** – High-performance async web framework for API development
+- **pandas** – Data cleaning, manipulation, and structured tabular responses
+- **requests** – For making HTTP requests to external sources
+- **imgkit** – Convert HTML to PNG (used for Zacks visual charts)
+- **Pillow (PIL)** – Image loading and processing
+- **pytesseract** – OCR (optical character recognition) for reading text from images
+- **yfinance** – Pulls financial market data from Yahoo Finance
+- **tradingview_ta** – Fetches technical analysis from TradingView
+- **finvizfinance** – Scrapes Finviz data for fundamentals, ratios, and key stats
+- **g4f** – Free ChatGPT wrapper client for prompt-based AI responses
+- **multiprocessing** – Concurrent data fetching or image parsing
+- **CORS Middleware** – `fastapi.middleware.cors.CORSMiddleware` for frontend-backend communication
+- **Custom module:** `stock_scrapper.TickerAnalyzer` – Your class that wraps all stock data logic
+
+### 🌐 Frontend
+
+- **HTML + JavaScript (Vanilla)** – No frameworks; just clean DOM scripting
+- **Tailwind CSS** – Utility-first CSS framework for responsive styling
+- **Markdown-to-HTML Parsing** – Custom renderer to display formatted ChatGPT output and data responses
+- **Dynamic rendering** – Converts JSON/text into structured HTML cards
+- **Tailwind Typography plugin** – For improved markdown and readability
 
 ---
 
 ## 🖼️ UI Preview
 
-> Enter a ticker symbol, click a data source, and get back structured financial data. You can also submit a free-form ChatGPT prompt.
+> Enter a ticker symbol, click a data source, and get back structured financial data. You can also submit a free-form ChatGPT prompt for a specific ticker.
 
 ---
 
@@ -59,9 +78,8 @@ Always conduct your own research and consult a licensed financial advisor before
 ├── main.py # FastAPI backend </br>
 ├── static/</br>
 │ ├── index.html # Main frontend page </br>
-│ ├── images/ # Zacks image assets (e.g., style scores) </br>
-│ └── ... # CSS/JS if separated later </br>
-└── stock_scrapper.py # Your custom class for fetching data </br>
+│ ├── images/ # For Zacks image assets </br>
+└── stock_scrapper.py # Backend logic </br>
 
 ## 🛠️ Setup Instructions
 
@@ -74,16 +92,30 @@ cd stock-analyzer
 
 ### 2. Create a virtual environment
 ```bash
-python3 -m venv venv
-source venv/bin/activate
+python3 -m venv stock_analysis_env
+source stock_analysis_env/bin/activate
 ```
 
-### 3. Install dependencies
+### 5. Install `wkhtmltoimage` (required for imgkit)
+* #### Ubuntu/Debian:
+```bash
+sudo apt-get install wkhtmltopdf
+```
+* #### macOS (with Homebrew):
+```bash
+brew install Caskroom/cask/wkhtmltopdf
+```
+* #### Windows:
+Download from [wkhtmltopdf.org](https://wkhtmltopdf.org/downloads.html)
+⚠️ Make sure wkhtmltoimage is available in your system's PATH.
+
+
+### 4. Install dependencies
 ```bash
 pip install -r ta_installs.txt
 ```
 
-### 4. Run the backend server
+### 5. Run the backend server
 ```bash
 ./run_web.sh
 ```
