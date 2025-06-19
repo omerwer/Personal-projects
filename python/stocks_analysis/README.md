@@ -27,7 +27,7 @@ Always conduct your own research and consult a licensed financial advisor before
 
 ## 🚀 Features
 
-- 🔍 Lookup a stock **ticker** (actual name of the company will not work) across:
+- 🔍 Lookup a stock ticker across:
   - Zacks
   - TradingView
   - Yahoo Finance
@@ -46,22 +46,19 @@ Always conduct your own research and consult a licensed financial advisor before
 - **FastAPI** – High-performance async web framework for API development
 - **pandas** – Data cleaning, manipulation, and structured tabular responses
 - **requests** – For making HTTP requests to external sources
-- **imgkit** – Convert HTML to PNG (used for Zacks visual charts)
+- **imgkit** – Convert HTML to PNG (used for Zacks visual charts and for TradingView)
 - **Pillow (PIL)** – Image loading and processing
-- **pytesseract** – OCR (optical character recognition) for reading text from images
+- **pytesseract** – OCR (optical character recognition) for reading text from images (specifically for TradingView)
 - **yfinance** – Pulls financial market data from Yahoo Finance
-- **tradingview_ta** – Fetches technical analysis from TradingView
-- **finvizfinance** – Scrapes Finviz data for fundamentals, ratios, and key stats
+- **tradingview_ta** – Fetches data analysis from TradingView
+- **finvizfinance** – Scrapes Finviz data
 - **g4f** – Free ChatGPT wrapper client for prompt-based AI responses
-- **multiprocessing** – Concurrent data fetching or image parsing
-- **CORS Middleware** – `fastapi.middleware.cors.CORSMiddleware` for frontend-backend communication
-- **Custom module:** `stock_scrapper.TickerAnalyzer` – Your class that wraps all stock data logic
+- **CORS Middleware** – FastAPI middelware for frontend-backend communication
 
 ### 🌐 Frontend
 
-- **HTML + JavaScript (Vanilla)** – No frameworks; just clean DOM scripting
+- **HTML + JavaScript (Vanilla)**
 - **Tailwind CSS** – Utility-first CSS framework for responsive styling
-- **Markdown-to-HTML Parsing** – Custom renderer to display formatted ChatGPT output and data responses
 - **Dynamic rendering** – Converts JSON/text into structured HTML cards
 - **Tailwind Typography plugin** – For improved markdown and readability
 
@@ -69,7 +66,7 @@ Always conduct your own research and consult a licensed financial advisor before
 
 ## 🖼️ UI Preview
 
-> Enter a ticker symbol, click a data source, and get back structured financial data. You can also submit a free-form ChatGPT prompt for a specific ticker.
+> Enter a ticker symbol (notice that actual company name will not work), click a data source, and get back structured financial data. You can also submit a free-form ChatGPT prompt for a specific ticker.
 
 ---
 
@@ -84,19 +81,18 @@ Always conduct your own research and consult a licensed financial advisor before
 ## 🛠️ Setup Instructions
 
 ### 1. Clone the repository
-
 ```bash
-git clone https://github.com/yourusername/stock-analyzer.git
-cd stock-analyzer
+git clone https://github.com/omerwer/Personal-projects.git
+cd python/stocks_analysis/
 ```
 
 ### 2. Create a virtual environment
 ```bash
-python3 -m venv stock_analysis_env
-source stock_analysis_env/bin/activate
+python3 -m venv stocks_analysis_env
+source stocks_analysis_env/bin/activate
 ```
 
-### 5. Install `wkhtmltoimage` (required for imgkit)
+### 3. Install `wkhtmltoimage` (required for imgkit)
 * #### Ubuntu/Debian:
 ```bash
 sudo apt-get install wkhtmltopdf
