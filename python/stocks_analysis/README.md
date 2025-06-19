@@ -10,6 +10,10 @@ Query live data from **Zacks**, **TradingView**, **Yahoo Finance**, **Finviz**, 
 
 This application is **not intended to provide financial advice**.
 
+This application was tested **only** on a UNIX OS env. Any Windows or macOS usage is strictly under the user's self discretion.
+
+This application is not garanteed to work 100% of the times. It is meant for personal use.
+
 It is strictly for **educational and non-commercial use only**.
 
 All data is sourced from third-party services:
