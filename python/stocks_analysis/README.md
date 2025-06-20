@@ -84,6 +84,13 @@ Always conduct your own research and consult a licensed financial advisor before
 
 ## 🛠️ Setup Instructions
 
+### 0. Install prequisities (for Linux):
+```bash
+sudo apt-get install python3-tk python3-dev
+# if you are running through WSL:
+export DISPLAY=:0
+```
+
 ### 1. Clone the repository
 ```bash
 git clone https://github.com/omerwer/Personal-projects.git
