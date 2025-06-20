@@ -7,3 +7,5 @@ pytesseract
 finvizfinance
 g4f
 urllib3
+uvicorn
+fastapi
