@@ -1,7 +1,6 @@
 
 import requests
-import readline
-from abc import ABC, abstractmethod
+from abc import ABC
 
 import imgkit
 import os
@@ -14,6 +13,8 @@ import multiprocessing
 import re
 from finvizfinance.quote import finvizfinance
 from g4f.client import Client
+
+import pyautogui
 
 class TickerAnalyzer:
     def __init__(self):
@@ -49,10 +50,6 @@ class TickerAnalyzer:
             self.ticker = None
             self.summary = dict()
     
-        # @abstractmethod
-        # def get_ticker_info(self, ticker: str):
-        #     pass
-    
     class Zacks(Source):
         def _get_zacks_styles_score_image(self, ticker: str):
             url = f'https://www.zacks.com/stock/quote/{ticker}?q={ticker}'
@@ -64,11 +61,22 @@ class TickerAnalyzer:
                 'width': '1280',  # or adjust based on your needs
             }
 
+            try:
+                width, height = pyautogui.size()
+                print(f"Screen Resolution: {width}x{height}")
+            except ImportError:
+                print("pyautogui module not found. Install it using: pip install pyautogui")
+            except Exception as e:
+                print(f"An error occurred: {e}")
+
             config = imgkit.config(wkhtmltoimage='/usr/bin/wkhtmltoimage') # First install - sudo apt-get install wkhtmltopdf
             image_path = 'image.png'
             imgkit.from_url(url, image_path, config=config, options=options)
 
-            crop_box = (330, 180, 1145, 480)
+            # screen resolution is based on a 1920x1080 size, so we need to adjust for the current screen resolution
+            scale_x = width / 1920
+            scale_y = height / 1080
+            crop_box = (330 * scale_x, 180 * scale_y, 1145 * scale_x, 480 * scale_y)
 
             cropped_img = Image.open(image_path).crop(crop_box)
             os.remove(image_path)
@@ -326,8 +334,19 @@ class TickerAnalyzer:
             image_path_ks = 'tv_ks.png'
             image_path_forecast = 'tv_forecast.png'
 
-            process_ks = multiprocessing.Process(target=self._render_imgkit, args=(url, image_path_ks, config, options, (15, 1375, 315, 2600), 'ks', stats_and_price_target))
-            process_forecast = multiprocessing.Process(target=self._render_imgkit, args=(forecast_url, image_path_forecast, config, options, (19, 654, 199, 732), 'forecast', stats_and_price_target, analysis))
+            try:
+                width, height = pyautogui.size()
+                print(f"Screen Resolution: {width}x{height}")
+            except ImportError:
+                print("pyautogui module not found. Install it using: pip install pyautogui")
+            except Exception as e:
+                print(f"An error occurred: {e}")
+
+            scale_x = width / 1920
+            scale_y = height / 1080
+
+            process_ks = multiprocessing.Process(target=self._render_imgkit, args=(url, image_path_ks, config, options, (15 * scale_x, 1375 * scale_y, 315 * scale_x, 2600 * scale_y), 'ks', stats_and_price_target))
+            process_forecast = multiprocessing.Process(target=self._render_imgkit, args=(forecast_url, image_path_forecast, config, options, (19 * scale_x, 654 * scale_y, 199 * scale_x, 732 * scale_y), 'forecast', stats_and_price_target, analysis))
 
             process_ks.start()
             process_forecast.start()
