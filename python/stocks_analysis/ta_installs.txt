@@ -9,3 +9,4 @@ g4f
 urllib3
 uvicorn
 fastapi
+pyautogui
