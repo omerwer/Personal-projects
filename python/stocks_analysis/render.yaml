@@ -4,6 +4,6 @@ services:
     env: python
     buildCommand: |
       pip install -r ta_installs.txt
-      ./install_wkhtmltopdf_render.sh
+      bash install_wkhtmltopdf_render.sh
     startCommand: uvicorn app:app --reload
     plan: free
