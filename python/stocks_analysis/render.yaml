@@ -1,9 +1,0 @@
-services:
-  - type: web
-    name: stocks-analysis
-    env: python
-    buildCommand: |
-      pip install -r ta_installs.txt
-      bash install_wkhtmltopdf_render.sh
-    startCommand: uvicorn app:app --reload
-    plan: free
