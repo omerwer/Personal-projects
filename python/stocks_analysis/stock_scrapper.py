@@ -14,8 +14,6 @@ import re
 from finvizfinance.quote import finvizfinance
 from g4f.client import Client
 
-if os.environ.get("ENV") != "render":
-    import pyautogui
 
 class TickerAnalyzer:
     def __init__(self):
@@ -63,8 +61,10 @@ class TickerAnalyzer:
             }
 
             try:
-                width, height = pyautogui.size()
-                print(f"Screen Resolution: {width}x{height}")
+                if os.environ.get("ENV") != "render":
+                    import pyautogui
+                    width, height = pyautogui.size()
+                    print(f"Screen Resolution: {width}x{height}")
             except ImportError:
                 print("pyautogui module not found. Install it using: pip install pyautogui")
             except Exception as e:
@@ -336,8 +336,10 @@ class TickerAnalyzer:
             image_path_forecast = 'tv_forecast.png'
 
             try:
-                width, height = pyautogui.size()
-                print(f"Screen Resolution: {width}x{height}")
+                if os.environ.get("ENV") != "render":
+                    import pyautogui
+                    width, height = pyautogui.size()
+                    print(f"Screen Resolution: {width}x{height}")
             except ImportError:
                 print("pyautogui module not found. Install it using: pip install pyautogui")
             except Exception as e:
