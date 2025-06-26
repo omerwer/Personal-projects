@@ -5,5 +5,5 @@ services:
     buildCommand: |
       pip install -r ta_installs.txt
       ./install_wkhtmltopdf_render.sh
-    startCommand: ./run_web.sh
+    startCommand: uvicorn app:app --reload
     plan: free
