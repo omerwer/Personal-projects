@@ -4,6 +4,6 @@ services:
     env: python
     buildCommand: |
       pip install -r ta_installs.txt
-      bash install_wkhtmltopdf.sh
+      ./install_wkhtmltopdf_render.sh
     startCommand: ./run_web.sh
     plan: free
