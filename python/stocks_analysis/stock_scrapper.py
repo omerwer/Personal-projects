@@ -14,7 +14,8 @@ import re
 from finvizfinance.quote import finvizfinance
 from g4f.client import Client
 
-import pyautogui
+if os.environ.get("ENV") != "render":
+    import pyautogui
 
 class TickerAnalyzer:
     def __init__(self):
