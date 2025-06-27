@@ -6,13 +6,13 @@ This is a Python-based **RAG pipeline** designed for question answering over loc
 
 ## 🚀 Features
 
-* 📄 Ingests and chunks documents (PDF, `.md`, `.txt`, `.json`)
+* 📄 Loads and chunks documents (PDF, `.md`, `.txt`, `.json`)
 * 🤖 Embeds text using `SentenceTransformers` and indexes with `FAISS`
 * 🧠 Queries LLM (AI21 Jamba) using top-k retrieved chunks
 * ✅ Evaluates answer quality using:
 
   * Precision\@k (chunk-level relevance)
-  * RAGAS (context precision, recall, faithfulness, answer relevancy)
+  * RAGAS (context precision, recall, faithfulness, answer relevancy) - Only for OpenAI subscribers
 * 📦 Caches FAISS index and embeddings for faster subsequent loads
 * 📊 Logs evaluation data for audit and research
 
@@ -22,17 +22,15 @@ This is a Python-based **RAG pipeline** designed for question answering over loc
 
 ```
 .
-├── run_rag.py                 # Main entry point (interactive CLI)
+├── run_rag.py                # Main entry point (interactive CLI)
 ├── retriever.py              # Document loader, chunker, embedder, retriever
 ├── accuracy_tester.py        # Precision@k evaluation utility
 ├── assets/
-│   ├── embeddings.index      # Saved FAISS index
-│   ├── chunks.pkl            # Saved metadata for chunks
-│   ├── chunk_map.json        # Metadata of all chunks for evaluation
-│   ├── precision_test_log.json # Logs for Precision@k testing
+│   ├── embeddings.index      # Saved FAISS index (after first run)
+│   ├── chunks.pkl            # Saved metadata for chunks (after first run)
 │   └── ragas_dataset.json    # (Optional) RAGAS-formatted dataset
-├── sentence_transformer/     # Local cache of embedding model
-└── Automotive/Raw_PDFs/      # (Default) Folder for source documents
+├── sentence_transformer/     # Local cache of embedding model (after first run)
+└── raw_pdfs                  # (Default) Folder for source documents
 ```
 
 ---
@@ -42,15 +40,15 @@ This is a Python-based **RAG pipeline** designed for question answering over loc
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/your-username/rag-pipeline.git
-cd rag-pipeline
+git https://github.com/omerwer/Personal-projects
+cd python/rag
 ```
 
 ### 2. Create a virtual environment and activate it
 
 ```bash
-python3 -m venv venv
-source venv/bin/activate
+python3 -m venv rag_venv
+source rag_venv/bin/activate
 ```
 
 ### 3. Install dependencies
@@ -82,14 +80,14 @@ Set your API keys for AI21 and OpenAI before running the app:
 
 ```bash
 export AI21_API_KEY=your_ai21_key
-export OPENAI_API_KEY=your_openai_key
+export OPENAI_API_KEY=your_openai_key (optional)
 ```
 
 You can also replace the placeholders directly in `run_rag.py`:
 
 ```python
 AI21_API_KEY = "your_ai21_key"
-OPENAI_API_KEY = "your_openai_key"
+OPENAI_API_KEY = "your_openai_key" (optional)
 ```
 
 ---
@@ -97,7 +95,7 @@ OPENAI_API_KEY = "your_openai_key"
 ## ▶️ Running the App
 
 ```bash
-python run_rag.py --folder ./path/to/your/docs
+python run_rag.py --folder ./path/to/your/docs OR ./run_rag.py (folder defaults to ./raw_pdfs)
 ```
 
 You'll be prompted with:
@@ -106,7 +104,7 @@ You'll be prompted with:
 Hi there! what can I assist you with?
 ```
 
-Ask a question based on your uploaded documents. To exit, type `exit`.
+Ask a question based on your uploaded documents (a list of optional questions are available in "questions_list.txt"). To exit, type `exit`.
 
 ---
 
@@ -229,15 +227,6 @@ MIT License
 * [AI21 Labs](https://www.ai21.com/)
 * [LangChain](https://www.langchain.com/)
 * [RAGAS Evaluation Toolkit](https://github.com/explodinggradients/ragas)
-
----
-
-## ✨ Future Enhancements
-
-* Add support for multi-modal inputs
-* Web UI using Streamlit or Gradio
-* Plug-and-play support for other LLMs (Anthropic, Mistral, etc.)
-* Better ground truth dataset generation for RAGAS
 
 ---
 
