@@ -1,0 +1,78 @@
+### example1.pdf
+Question 1:
+What is the fundamental principle behind the "Just-In-Time" concept in the Toyota Production System (TPS)?
+Answer:
+The fundamental principle of "Just-In-Time" is to “go get what you need, in the amount you need, when you need it.” This approach minimizes overproduction and visualizes surplus capacity, enabling more efficient production and cost reduction.
+Source in Document:
+"‘Just-In-Time’ was translated for the workplace as, ‘Go get what you need, in the amount you need, when you need it’... This is the fundamental idea of the Toyota Production System..."
+— Practice Rather than Theory section
+
+Question 2:
+How does Toyota’s approach to labor reduction relate to cost savings?
+Answer:
+Labor reduction leads to cost savings only when it results in a decrease in the number of people required for a process. Merely reducing the number of hours per person does not achieve true cost reduction. True cost benefits come from reducing the actual number of workers needed.
+Source in Document:
+"If a job for one person is reduced by 0.9 hours, this would not result in a reduction in labor costs. Only when the number of people is reduced, will true cost reduction be achieved."
+— Chapter 1, Section 1 - Toyota Cost & Labor Reduction Method
+
+Question 3:
+Why is building quality into the production process preferred over post-process inspection in TPS?
+Answer:
+Building quality into the production process ensures that defects are caught and corrected immediately within each step. Post-process inspections are considered non-value-adding and can increase costs. Every worker is responsible for the quality, and the next process is treated as the customer, ensuring that only good products move forward.
+Source in Document:
+"The concept of ‘build quality in the production process’ was born. Which means completely assuring quality in every single process step where it can only send a good product to the following process."
+— Chapter 1, Section 3 - Labor Reduction and Quality
+
+
+### example2.pdf
+Question 1:
+How does ABB’s Connected Services help prevent unplanned downtime in robotic systems used in automotive manufacturing?
+Answer:
+ABB’s Connected Services uses machine learning algorithms and Mechanical Condition Change (MCC) features to detect early signs of abnormal robot behavior. By analyzing data from robot controllers and a database of over 750 factories, ABB can predict and prevent failures such as gearbox or motor breakdowns. This proactive maintenance reduces costly downtime, including micro stops that previously went unnoticed.
+Source in Document:
+“ABB’s Connected Services … piloting a machine learning-based algorithm that can detect and analyse abnormal robot behaviors... MCC is an advanced feature that can detect manipulator problems prior to costly failures … Identifying and resolving the root causes of micro stops increased productivity... by one full percent.”
+— Section: Digital fleet optimization for robots
+
+Question 2:
+What are the benefits of ABB’s 3D vision and metrology solution adopted by BENTELER in their quality control process?
+Answer:
+The 3D vision and metrology system allows non-contact, high-speed inspection of up to five million 3D points per part, drastically improving precision and cycle time. This leads to 100% quality control of finished parts, reducing rework, scrap, and quality control errors, while increasing productivity and allowing real-time validation of parts against CAD models.
+Source in Document:
+“ABB’s digital 3D vision … allows up to five million 3D points to be inspected … Automating the inspection … helps plants to reduce cycle times while raising quality… quality control for 100 per cent of finished parts, and significant cost savings.”
+— Section: Automating the quality control and inspection process
+
+Question 3:
+What is the main advantage of using modular cell manufacturing in the future automotive factory?
+Answer:
+Modular cell manufacturing increases flexibility and productivity by allowing independent operation of autonomous cells. This minimizes the impact of downtime in any one cell, enables quick reconfiguration of the production line, and allows for greater responsiveness to market changes. It also improves worker utilization and reduces wage costs.
+Source in Document:
+“Any downtime in one cell has a minimal effect on the entire production process... increases the ability of the manufacturer to quickly react to changing market trends... flexible cell manufacturing increased worker utilization by 12 percent, leading to a reduction in annual wage costs.”
+— Section: Disrupting the auto industry at a cellular level
+
+### example3.pdf
+Question 1:
+How did the productivity of U.S. auto plants change between 1989 and 1994, and how did it compare to Japanese plants?
+Answer:
+Between 1989 and 1994, U.S. Big 3 plants improved their productivity by 17%, reducing average direct labor hours per vehicle from 24.1 to 20. Japanese-owned plants in Japan improved by only 5.8% (from 15.6 to 14.7 hours), but still remained more efficient overall, assembling vehicles over 5 hours faster on average than U.S. plants.
+Source in Document:
+"Figure 9 shows that the U.S.-owned (Big 3) plants... improved their productivity by 17 percent— from 24.1 to 20 hours per vehicle... Japanese-owned plants in Japan showed only a 5.8 percent improvement... still produce cars faster... in 25 percent less time."
+— Section: Productivity Performance
+
+Question 2:
+What is the Partnership for a New Generation of Vehicles (PNGV) and what are its main goals?
+Answer:
+The PNGV is a public-private partnership between the Big 3 automakers and the U.S. government aimed at increasing national manufacturing competitiveness, commercializing innovations in conventional vehicles, and developing environmentally friendly vehicles that achieve up to three times the fuel efficiency of 1994 sedans without sacrificing performance or affordability.
+Source in Document:
+"PNGV has three mutually supportive, interactive goals:
+1. Significantly improve national competitiveness in manufacturing.
+2. Implement commercially viable innovations from ongoing research in conventional vehicles.
+3. Develop environmentally friendly vehicles that can achieve up to three times the fuel efficiency of comparable 1994 family sedans..."
+— Section: Cooperative Research and the Partnership for a New Generation of Vehicles
+
+Question 3:
+What organizational strategies distinguish Chrysler’s product development process from those of Ford and GM?
+Answer:
+Chrysler’s strategy features lean, highly integrated domestic product development with strong supplier involvement. It employs platform teams with clear development responsibility, uses a flattened hierarchy, and emphasizes component reuse and exports. Chrysler also uses Tech Clubs to share technical knowledge across projects and minimizes corporate interference in team operations.
+Source in Document:
+"Chrysler’s strategy emphasizes lean domestic product development... has five platform teams... corporate staff functions as a service organization... Tech Clubs... represent a 'virtual' functional organization... flattened hierarchies... growing reuse of components across platforms..."
+— Section: Chrysler Corporation
