@@ -4,6 +4,8 @@ from abc import ABC
 
 import imgkit
 import os
+from io import BytesIO
+import base64
 from PIL import Image
 from tradingview_ta import TA_Handler, Interval
 import yfinance as yf
@@ -14,6 +16,7 @@ import re
 from finvizfinance.quote import finvizfinance
 from g4f.client import Client
 
+import pyautogui
 
 class TickerAnalyzer:
     def __init__(self):
@@ -64,25 +67,29 @@ class TickerAnalyzer:
                 if os.environ.get("ENV") != "render":
                     import pyautogui
                     width, height = pyautogui.size()
-                    print(f"Screen Resolution: {width}x{height}")
+                else:
+                    width = 1920
+                    height = 1080
             except ImportError:
                 print("pyautogui module not found. Install it using: pip install pyautogui")
             except Exception as e:
                 print(f"An error occurred: {e}")
 
             config = imgkit.config(wkhtmltoimage='/usr/bin/wkhtmltoimage') # First install - sudo apt-get install wkhtmltopdf
-            image_path = 'image.png'
-            imgkit.from_url(url, image_path, config=config, options=options)
+
+            img_bytes = imgkit.from_url(url, False, config=config, options=options)
 
             # screen resolution is based on a 1920x1080 size, so we need to adjust for the current screen resolution
             scale_x = width / 1920
             scale_y = height / 1080
             crop_box = (330 * scale_x, 180 * scale_y, 1145 * scale_x, 480 * scale_y)
 
-            cropped_img = Image.open(image_path).crop(crop_box)
-            os.remove(image_path)
+            cropped_img = Image.open(BytesIO(img_bytes)).crop(crop_box)
 
-            cropped_img.save(f"static/images/style_scores_{ticker}.png")
+            buffer = BytesIO()
+            cropped_img.save(buffer, format="PNG")
+            buffer.seek(0)
+            return base64.b64encode(buffer.read()).decode('utf-8')
 
         def get_ticker_info(self, ticker: str):
             try:
@@ -90,7 +97,7 @@ class TickerAnalyzer:
 
                 self.ticker = ticker.upper()
 
-                self._get_zacks_styles_score_image(self.ticker)
+                image = self._get_zacks_styles_score_image(self.ticker)
 
                 response = requests.get(url=f"https://quote-feed.zacks.com/index.php?t={self.ticker}")
                 data = dict(response.json())[self.ticker]
@@ -102,6 +109,7 @@ class TickerAnalyzer:
                 data_dict.update({"dividend_freq" : data['source']['sungard']["dividend_freq"]})
                 data_dict.update({'dividend_yield' : data['dividend_yield']+'%'})
                 data_dict.update({"dividend" : data['source']['sungard']["dividend"]})
+                data_dict.update({"image" : image})
 
                 self.summary = data_dict
             
@@ -279,10 +287,9 @@ class TickerAnalyzer:
         
         def _render_imgkit(self, url, output_path, config, options, crop_box, str, shared, analysis=None):
             try:
-                imgkit.from_url(url, output_path, config=config, options=options)
+                img_bytes = imgkit.from_url(url, False, config=config, options=options)
 
-                cropped_img = Image.open(output_path).crop(crop_box)
-                os.remove(output_path)
+                cropped_img = Image.open(BytesIO(img_bytes)).crop(crop_box)
 
                 if str == 'forecast':
                     text = pytesseract.image_to_string(cropped_img)
@@ -339,7 +346,9 @@ class TickerAnalyzer:
                 if os.environ.get("ENV") != "render":
                     import pyautogui
                     width, height = pyautogui.size()
-                    print(f"Screen Resolution: {width}x{height}")
+                else:
+                    width = 1920
+                    height = 1080
             except ImportError:
                 print("pyautogui module not found. Install it using: pip install pyautogui")
             except Exception as e:

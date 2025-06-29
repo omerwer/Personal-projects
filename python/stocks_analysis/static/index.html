@@ -138,8 +138,8 @@
         output.innerHTML = html;
 
         const img = document.getElementById('result-img');
-        if (data.image_url) {
-          img.src = data.image_url;
+        if (data.image) {
+          img.src = data.image;
           img.classList.remove('hidden');
         } else {
           img.classList.add('hidden');
