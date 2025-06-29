@@ -11,7 +11,6 @@ from tradingview_ta import TA_Handler, Interval
 import yfinance as yf
 from datetime import datetime
 import pytesseract
-import multiprocessing
 import re
 from finvizfinance.quote import finvizfinance
 from g4f.client import Client
@@ -319,8 +318,7 @@ class TickerAnalyzer:
 
             except Exception as e:
                 print(f"{e}, , please try again if any data is missing...")
-                if os.path.isfile(output_path):
-                    os.remove(output_path)
+
         
         def _get_tv_stats_from_image(self, ticker: str, exchange: str, analysis: dict):
             url = f'https://www.tradingview.com/symbols/{exchange}-{ticker}/'
@@ -336,10 +334,7 @@ class TickerAnalyzer:
 
             config = imgkit.config(wkhtmltoimage='/usr/bin/wkhtmltoimage')
 
-            stats_and_price_target = multiprocessing.Manager().dict()
-
-            image_path_ks = 'tv_ks.png'
-            image_path_forecast = 'tv_forecast.png'
+            stats_and_price_target = {}
 
             width, height = get_screen_size()
 
