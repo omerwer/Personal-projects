@@ -1,10 +1,11 @@
 services:
   - type: web
-    name: stock-analyzer
-    env: python
-    buildCommand: |
-      pip install -r ta_installs.txt
-      bash install_wkhtmltopdf.sh
-    startCommand: uvicorn app:app --host 0.0.0.0 --port 10000
-    plan: free
+    name: stock-analyzer-app
+    env: docker
+    repo: https://github.com/omerwer/Personal-projects
+    branch: main
     autoDeploy: true
+    dockerfilePath: python/stocks_analysis/Dockerfile
+    buildFilter:
+      paths:
+        - python/stocks_analysis/**
