@@ -284,7 +284,7 @@ class TickerAnalyzer:
                             key_stats[ks_string_list[index]] = ks_string_list[index+1]
                             index = index + 2
         
-        def _render_imgkit(self, url, output_path, config, options, crop_box, str, shared, analysis=None):
+        def _render_imgkit(self, url, config, options, crop_box, str, shared, analysis=None):
             try:
                 img_bytes = imgkit.from_url(url, False, config=config, options=options)
 
