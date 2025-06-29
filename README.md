@@ -4,12 +4,20 @@ Welcome to my collection of personal projects! This repository contains a variet
 
 ## 🗂️ Projects Overview
 
-### 🧨 C++: Defence Game
-An interactive game where the goal is to intercept incoming missiles. You have 1 minute to stop as many missiles as possible.
+### 📈 Python: Stocks Analysis
 
-> 📂 Path: `cpp/defence_game`
+Free, open-source data fetaching web application from serveral well-known stocks analysis websites. 
+
+> 📂 Path: `python/stocks_analysis`
 
 ---
+
+### 🐍 Python: RAG (Document Retrieval + LLM)
+
+A generic RAG pipeline that allows you to query local document collections (PDFs, text) with an LLM. It uses LangChain and a vector database (Chroma or FAISS) to retrieve context and feed it into a language model chat interface. Ideal for building Q&A assistants over custom document sets.  
+
+> 📂 Path: `python/rag`
+
 
 ### 💬 Python: Client-Server Messaging App
 A simple messaging application using Musquito, allowing multiple clients to communicate with a server and with each other. Supports features like online status checks, file transfer, and graceful disconnection with signal handling.
@@ -32,19 +40,13 @@ Processes input videos for people detection and face bluring for privacy protect
 
 ---
 
-### 📈 Python: Stocks Analysis
+### 🧨 C++: Defence Game
+An interactive game where the goal is to intercept incoming missiles. You have 1 minute to stop as many missiles as possible.
 
-Free, open-source data fetaching web application from serveral well-known stocks analysis websites. 
-
-> 📂 Path: `python/stocks_analysis`
+> 📂 Path: `cpp/defence_game`
 
 ---
 
-### 🐍 Python: RAG (Document Retrieval + LLM)
-
-A generic RAG pipeline that allows you to query local document collections (PDFs, text) with an LLM. It uses LangChain and a vector database (Chroma or FAISS) to retrieve context and feed it into a language model chat interface. Ideal for building Q&A assistants over custom document sets.  
-
-> 📂 Path: `python/rag`
 
 ## 🚀 Getting Started
 
