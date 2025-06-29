@@ -16,7 +16,16 @@ import re
 from finvizfinance.quote import finvizfinance
 from g4f.client import Client
 
-import pyautogui
+
+def get_screen_size():
+    if os.environ.get("ENV") == "render":
+        return (1920, 1080)
+    try:
+        import pyautogui
+        return pyautogui.size()
+    except Exception as e:
+        return (1920, 1080)
+    
 
 class TickerAnalyzer:
     def __init__(self):
@@ -63,17 +72,7 @@ class TickerAnalyzer:
                 'width': '1280',  # or adjust based on your needs
             }
 
-            try:
-                if os.environ.get("ENV") != "render":
-                    import pyautogui
-                    width, height = pyautogui.size()
-                else:
-                    width = 1920
-                    height = 1080
-            except ImportError:
-                print("pyautogui module not found. Install it using: pip install pyautogui")
-            except Exception as e:
-                print(f"An error occurred: {e}")
+            width, height = get_screen_size()
 
             config = imgkit.config(wkhtmltoimage='/usr/bin/wkhtmltoimage') # First install - sudo apt-get install wkhtmltopdf
 
@@ -342,17 +341,7 @@ class TickerAnalyzer:
             image_path_ks = 'tv_ks.png'
             image_path_forecast = 'tv_forecast.png'
 
-            try:
-                if os.environ.get("ENV") != "render":
-                    import pyautogui
-                    width, height = pyautogui.size()
-                else:
-                    width = 1920
-                    height = 1080
-            except ImportError:
-                print("pyautogui module not found. Install it using: pip install pyautogui")
-            except Exception as e:
-                print(f"An error occurred: {e}")
+            width, height = get_screen_size()
 
             scale_x = width / 1920
             scale_y = height / 1080
