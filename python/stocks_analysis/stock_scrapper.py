@@ -11,6 +11,7 @@ from tradingview_ta import TA_Handler, Interval
 import yfinance as yf
 from datetime import datetime
 import pytesseract
+pytesseract.pytesseract.tesseract_cmd = "/usr/bin/tesseract"
 import re
 from finvizfinance.quote import finvizfinance
 from g4f.client import Client
