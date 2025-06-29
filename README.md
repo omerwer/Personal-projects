@@ -43,7 +43,8 @@ Free, open-source data fetaching web application from serveral well-known stocks
 ### 🐍 Python: RAG (Document Retrieval + LLM)
 
 A generic RAG pipeline that allows you to query local document collections (PDFs, text) with an LLM. It uses LangChain and a vector database (Chroma or FAISS) to retrieve context and feed it into a language model chat interface. Ideal for building Q&A assistants over custom document sets.  
-**Path:** `python/rag`
+
+> 📂 Path: `python/rag`
 
 ## 🚀 Getting Started
 
