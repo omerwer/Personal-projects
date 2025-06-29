@@ -35,7 +35,8 @@ Processes input videos for people detection and face bluring for privacy protect
 ### 📈 Python: Stocks Analysis
 
 Free, open-source data fetaching web application from serveral well-known stocks analysis websites. 
-**Path:** `python/stocks_analysis`
+
+> 📂 Path: `python/stocks_analysis`
 
 ---
 
