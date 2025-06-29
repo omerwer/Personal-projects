@@ -346,14 +346,8 @@ class TickerAnalyzer:
             scale_x = width / 1920
             scale_y = height / 1080
 
-            process_ks = multiprocessing.Process(target=self._render_imgkit, args=(url, image_path_ks, config, options, (15 * scale_x, 1375 * scale_y, 315 * scale_x, 2600 * scale_y), 'ks', stats_and_price_target))
-            process_forecast = multiprocessing.Process(target=self._render_imgkit, args=(forecast_url, image_path_forecast, config, options, (19 * scale_x, 654 * scale_y, 199 * scale_x, 732 * scale_y), 'forecast', stats_and_price_target, analysis))
-
-            process_ks.start()
-            process_forecast.start()
-
-            process_ks.join(60)
-            process_forecast.join(60)
+            self._render_imgkit(url, config, options, (15 * scale_x, 1375 * scale_y, 315 * scale_x, 2600 * scale_y), 'ks', stats_and_price_target)
+            self._render_imgkit(forecast_url, config, options, (19 * scale_x, 654 * scale_y, 199 * scale_x, 732 * scale_y), 'forecast', stats_and_price_target, analysis)
 
             self.summary.update(stats_and_price_target)
 
