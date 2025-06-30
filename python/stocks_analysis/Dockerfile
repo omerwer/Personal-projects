@@ -24,6 +24,8 @@ WORKDIR /app
 COPY ta_installs.txt .
 RUN pip install --no-cache-dir -r ta_installs.txt
 
+RUN which tesseract && tesseract --version
+
 # Copy source code
 COPY . .
 
