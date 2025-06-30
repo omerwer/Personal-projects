@@ -17,7 +17,6 @@ RUN apt-get update && apt-get install -y \
     python3.10-dev \
     python3-pip \
     tesseract-ocr \
-    tesseract-ocr-eng \
     libtesseract-dev \
     libglib2.0-0 \
     libsm6 \
