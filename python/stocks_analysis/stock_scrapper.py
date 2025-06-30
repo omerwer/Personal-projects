@@ -15,6 +15,8 @@ import re
 from finvizfinance.quote import finvizfinance
 from g4f.client import Client
 
+pytesseract.pytesseract.tesseract_cmd = "/usr/bin/tesseract"
+
 
 def get_screen_size():
     if os.environ.get("ENV") == "render":
