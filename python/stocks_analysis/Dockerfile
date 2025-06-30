@@ -30,6 +30,9 @@ RUN apt-get update && apt-get install -y \
 # Ensure python and pip are available as 'python' and 'pip'
 RUN ln -s /usr/bin/python3.10 /usr/bin/python && ln -s /usr/bin/pip3 /usr/bin/pip
 
+# Debugging: show tesseract location and version
+RUN which tesseract && tesseract --version
+
 # Install wkhtmltoimage manually (same as before)
 RUN curl -LO https://github.com/wkhtmltopdf/packaging/releases/download/0.12.6-1/wkhtmltox_0.12.6-1.bionic_amd64.deb && \
     apt install -y ./wkhtmltox_0.12.6-1.bionic_amd64.deb && \
@@ -44,9 +47,6 @@ RUN pip install --no-cache-dir -r ta_installs.txt
 
 # Copy app code
 COPY . .
-
-# Debugging: show tesseract location and version
-RUN which tesseract && tesseract --version
 
 # Expose port and run FastAPI
 CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "10000"]
