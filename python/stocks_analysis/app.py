@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 
 from stock_scrapper import TickerAnalyzer
-from fastapi import FastAPI
+
+from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
-import urllib3
-from fastapi import Request
 from fastapi.middleware.cors import CORSMiddleware
+
+import urllib3
 import pandas as pd
 import math
 
@@ -26,14 +27,22 @@ def sanitize_for_json(obj):
         return obj.isoformat()
     elif isinstance(obj, float):
         if math.isnan(obj) or math.isinf(obj):
-            return None  # Or 0.0 or "N/A" depending on your preference
+            return None
         return obj
     return obj
 
+
 @app.get("/")
 def root():
-    with open("static/index.html", "r") as f:
-        return HTMLResponse(content=f.read())
+    try:
+        with open("static/index.html", "r") as f:
+            return HTMLResponse(content=f.read())
+    except FileNotFoundError:
+        return JSONResponse(
+            status_code=404,
+            content={"error": "static/index.html not found"}
+        )
+
 
 @app.get("/Zacks/{ticker}")
 def zacks(ticker: str):
@@ -61,7 +70,7 @@ def tradingview(ticker: str):
 
 
 @app.get("/YahooFinance/{ticker}")
-def zacks(ticker: str):
+def yahoofinance(ticker: str):
     summary = ta.get_yf_info(ticker)
     return JSONResponse({"summary": sanitize_for_json(summary)})
 
