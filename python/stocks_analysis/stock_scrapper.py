@@ -15,6 +15,8 @@ import re
 from finvizfinance.quote import finvizfinance
 from g4f.client import Client
 
+import tickers_constants
+
 pytesseract.pytesseract.tesseract_cmd = "/usr/bin/tesseract"
 
 
@@ -63,6 +65,33 @@ class TickerAnalyzer:
             self.summary = dict()
     
     class Zacks(Source):
+        def get_ticker_info(self, ticker: str):
+            try:
+                data_dict = {}
+
+                self.ticker = ticker.upper()
+
+                image = self._get_zacks_styles_score_image(self.ticker)
+
+                response = requests.get(url=f"https://quote-feed.zacks.com/index.php?t={self.ticker}")
+                data = dict(response.json())[self.ticker]
+                data_dict.update({'name' : data['name']})
+                data_dict.update({'ticker' : data['ticker']})
+                data_dict.update({'zacks rank' : f"{data['zacks_rank']} ({data['zacks_rank_text']})"})
+                data_dict.update({"Forward P/E" : data['source']['sungard']["pe_ratio"]})
+
+                data_dict.update({"dividend_freq" : data['source']['sungard']["dividend_freq"]})
+                data_dict.update({'dividend_yield' : data['dividend_yield']+'%'})
+                data_dict.update({"dividend" : data['source']['sungard']["dividend"]})
+                data_dict.update({"image" : image})
+
+                self.summary = data_dict
+            
+            except Exception as e:
+                self.summary = {"msg" : f"{e}. Please provide a valid stock ticker."}
+
+            return self.summary
+        
         def _get_zacks_styles_score_image(self, ticker: str):
             url = f'https://www.zacks.com/stock/quote/{ticker}?q={ticker}'
 
@@ -91,177 +120,36 @@ class TickerAnalyzer:
             buffer.seek(0)
             return base64.b64encode(buffer.read()).decode('utf-8')
 
-        def get_ticker_info(self, ticker: str):
-            try:
-                data_dict = {}
-
-                self.ticker = ticker.upper()
-
-                image = self._get_zacks_styles_score_image(self.ticker)
-
-                response = requests.get(url=f"https://quote-feed.zacks.com/index.php?t={self.ticker}")
-                data = dict(response.json())[self.ticker]
-                data_dict.update({'name' : data['name']})
-                data_dict.update({'ticker' : data['ticker']})
-                data_dict.update({'zacks rank' : f"{data['zacks_rank']} ({data['zacks_rank_text']})"})
-                data_dict.update({"Forward P/E" : data['source']['sungard']["pe_ratio"]})
-
-                data_dict.update({"dividend_freq" : data['source']['sungard']["dividend_freq"]})
-                data_dict.update({'dividend_yield' : data['dividend_yield']+'%'})
-                data_dict.update({"dividend" : data['source']['sungard']["dividend"]})
-                data_dict.update({"image" : image})
-
-                self.summary = data_dict
-            
-            except Exception as e:
-                self.summary = {"msg" : f"{e}. Please provide a valid stock ticker."}
-
-            return self.summary
-                
-
-    class YahooFinance(Source):
-        def __init__(self):
-            super().__init__()
-            self.attributes = ['analyst_price_targets', 'news', 'recommendations_summary', 'upgrades_downgrades']
-        
-        def get_ticker_info(self, ticker: str):
-            try:
-                ticker_uppercase = ticker.upper()
-                self.ticker = yf.Ticker(ticker_uppercase)
-                for attr in dir(self.ticker):
-                    if attr in self.attributes and not attr == 'news':
-                        attr_value = getattr(self.ticker, attr)
-                        if attr == 'analyst_price_targets':
-                            conclusion = None
-                            if attr_value['current'] < attr_value['low']:
-                                conclusion = f'{ticker_uppercase} trades lower than low target! seems undervalued.'
-                            elif attr_value['current'] >= attr_value['high']:
-                                conclusion = f'{ticker_uppercase} trades higher than high target! seems overvalued.'
-                            else:
-                                conclusion = f'{ticker_uppercase} trades within range.'
-                            
-                            reccomendation_and_conclusion = (attr_value, conclusion)
-
-                            self.summary.update({'Price targets' : reccomendation_and_conclusion})
-                        elif attr == 'recommendations_summary':
-                            self.summary.update({'recommendations' : {}})
-                            attr_value = getattr(self.ticker, attr)
-                            recommendations_dict = attr_value.to_dict(orient='index')
-                            for (key, value) in recommendations_dict.items():
-                                _ = value.pop('period')
-                                self.summary['recommendations'].update({f'{key}-Month' : value})
-
-                        elif attr == 'upgrades_downgrades':
-                            upgrades_dict = attr_value.to_dict(orient='index')
-                            recent_upgrades_dict = {}
-                            for date, values in upgrades_dict.items():
-                                if date.year >= datetime.now().year - 1:
-                                    recent_upgrades_dict.update({date : values})
-
-                            upgrades = {
-                                str(k): v for k, v in recent_upgrades_dict.items()
-                            }
-
-                            self.summary.update({"Upgrades & downgrades" : upgrades})
-                        
-                    elif attr == 'news':
-                        recent_news_dict = {}
-                        for news in getattr(self.ticker, attr):
-                            content = news['content']
-                            curr_date = datetime.now()
-                            year, month, _ = content['pubDate'].split('-')
-                            if (int(year) == curr_date.year or (int(year) == curr_date.year - 1 and abs(curr_date.month -  int(month)) > 6)):
-                                for key in ['id', 'description', 'displayTime', 'isHosted', 
-                                            'bypassModal', 'previewUrl', 'thumbnail', 'provider', 
-                                            'clickThroughUrl', 'metadata', 'finance', 'storyline']:
-                                    _ = content.pop(key)
-
-                                content_type = content.pop('contentType')
-                                raw_url_data = content.pop('canonicalUrl')
-                                content['url'] = raw_url_data['url']
-                                recent_news_dict.update({content_type : content})
-
-
-                        news = {
-                            str(k): v for k, v in recent_news_dict.items()
-                        }
-                        self.summary.update({'News' : news})
-        
-            except Exception as e:
-                self.summary = {"msg" : f"{e}. Please provide a valid stock ticker."}
-                
-            return self.summary
-    
-    
     class Tradingview(Source):
         def __init__(self):
             super().__init__()
-            self.exchange  = {
-                                # North America
-                                "NYSE": "america",
-                                "NASDAQ": "america",
-                                "AMEX": "america",
-                                "TSX": "america",
-                                "TSXV": "america",
-                                "CSE": "america", # Canadian Securities Exchange
+            self.exchange  = tickers_constants.TV_STOCKS_EXCHAGE
 
-                                # Europe
-                                "LSE": "United Kingdom",       # London Stock Exchange
-                                "XETRA": "Germany",            # Deutsche Börse (electronic platform)
-                                "FWB": "Germany",              # Frankfurt Stock Exchange
-                                "Euronext": "Multi-country",   # Mainly France, Netherlands, Belgium, Portugal, Ireland
-                                "BME": "Spain",                # Bolsas y Mercados Españoles
-                                "SIX": "Switzerland",          # Swiss Exchange
-                                "Borsa Italiana": "Italy",     # Italy
-                                "Oslo": "Norway",              # Oslo Børs
-                                "WSE": "Poland",               # Warsaw Stock Exchange
+        def get_ticker_info(self, ticker: str):
+            self.ticker = ticker.upper()
+            for ex, region in self.exchange.items():
+                try:
+                    handler = TA_Handler(
+                        symbol=self.ticker,
+                        exchange=ex,
+                        screener=region,
+                        interval=Interval.INTERVAL_1_MONTH,
+                    )
 
-                                # Asia
-                                "TSE": "Japan",                # Tokyo Stock Exchange
-                                "HKEX": "Hong Kong",
-                                "SGX": "Singapore",
-                                "KOSPI": "South Korea",
-                                "SSE": "China",                # Shanghai Stock Exchange
-                                "SZSE": "China",               # Shenzhen Stock Exchange
-                                "TWSE": "Taiwan",
-                                "NSE": "India",                # National Stock Exchange
-                                "BSE": "India",                # Bombay Stock Exchange
+                    analysis = handler.get_analysis()
 
-                                # Australia
-                                "ASX": "oceania",
+                    self._get_tv_stats_from_image(self.ticker, ex, analysis)
 
-                                # Middle East
-                                "TASE": "Israel",             # Tel Aviv Stock Exchange
-                                "DFM": "United Arab Emirates",# Dubai Financial Market
-                                "ADX": "United Arab Emirates",# Abu Dhabi Securities Exchange
-                                "QSE": "Qatar",
-                                "KSE": "Kuwait",              # Boursa Kuwait
-                                "BHB": "Bahrain",
-                                "MSM": "Oman",                # Muscat Securities Market
+                    self.summary.update({'Analysis' : analysis.summary})
 
-                                # Africa
-                                "JSE": "South Africa",        # Johannesburg Stock Exchange
-                                "NSE Nigeria": "Nigeria",     # Nigerian Stock Exchange
-                                "EGX": "Egypt",               # Egyptian Exchange
+                except:
+                    continue
 
-                                # Latin America
-                                "B3": "Brazil",               # B3 (Brasil Bolsa Balcão)
-                                "BMV": "Mexico",              # Bolsa Mexicana de Valores
-                                "BCBA": "Argentina",          # Bolsa de Comercio de Buenos Aires
-                                "Santiago": "Chile",          # Bolsa de Comercio de Santiago
-                                "Lima": "Peru",               # Bolsa de Valores de Lima
-                                "BVC": "Colombia",            # Bolsa de Valores de Colombia
+                if not self.summary:
+                    self.summary = {"msg" : "Ticker doesn't exist. Please provide a valid stock ticker"}
 
-                                # Other / Eastern Europe & Misc
-                                "MOEX": "Russia",             # Moscow Exchange
-                                "MICEX": "Russia",            # Merged into MOEX
-                                "IDX": "Indonesia",           # Indonesia Stock Exchange
-                                "PSE": "Philippines",         # Philippine Stock Exchange
-                                "SET": "Thailand",            # Stock Exchange of Thailand
-                                "HNX": "Vietnam",             # Hanoi Stock Exchange
-                                "BIST": "Turkey",             # Borsa Istanbul
-                            }
-              
+                return self.summary
+            
         def _adjust_ks_string(self, ks_string_list, key_stats):
             index = 2
             indicators_list = ['TTM', 'indicated', 'FY']
@@ -347,32 +235,96 @@ class TickerAnalyzer:
             self._render_imgkit(forecast_url, config, options, (19 * scale_x, 654 * scale_y, 199 * scale_x, 732 * scale_y), 'forecast', stats_and_price_target, analysis)
 
             self.summary.update(stats_and_price_target)
+                     
 
-        
+    class YahooFinance(Source):
+        def __init__(self):
+            super().__init__()
+            self.attributes = ['analyst_price_targets', 'news', 'recommendations_summary', 'upgrades_downgrades']
+
         def get_ticker_info(self, ticker: str):
-            self.ticker = ticker.upper()
-            for ex, region in self.exchange.items():
-                try:
-                    handler = TA_Handler(
-                        symbol=self.ticker,
-                        exchange=ex,
-                        screener=region,
-                        interval=Interval.INTERVAL_1_MONTH,
-                    )
+            try:
+                ticker_uppercase = ticker.upper()
+                self.ticker = yf.Ticker(ticker_uppercase)
+                for attr in dir(self.ticker):
+                    if attr in self.attributes and not attr == 'news':
+                        attr_value = getattr(self.ticker, attr)
+                        self._not_news_attr_handeling(attr, attr_value, ticker_uppercase)
+                        
+                    elif attr == 'news':
+                        self._news_attr_handeling(attr)
+        
+            except Exception as e:
+                self.summary = {"msg" : f"{e}. Please provide a valid stock ticker."}
+                
+            return self.summary
+        
+        def _news_attr_handeling(self, attr):
+            recent_news_dict = {}
+            for news in getattr(self.ticker, attr):
+                content = news['content']
+                curr_date = datetime.now()
+                year, month, _ = content['pubDate'].split('-')
+                if (int(year) == curr_date.year or (int(year) == curr_date.year - 1 and abs(curr_date.month -  int(month)) > 6)):
+                    for key in ['id', 'description', 'displayTime', 'isHosted', 
+                                'bypassModal', 'previewUrl', 'thumbnail', 'provider', 
+                                'clickThroughUrl', 'metadata', 'finance', 'storyline']:
+                        _ = content.pop(key)
 
-                    analysis = handler.get_analysis()
+                    content_type = content.pop('contentType')
+                    raw_url_data = content.pop('canonicalUrl')
+                    content['url'] = raw_url_data['url']
+                    recent_news_dict.update({content_type : content})
 
-                    self._get_tv_stats_from_image(self.ticker, ex, analysis)
 
-                    self.summary.update({'Analysis' : analysis.summary})
+            news = {
+                str(k): v for k, v in recent_news_dict.items()
+            }
+            self.summary.update({'News' : news})
+        
+        def _upgrades_downgrades(self, attr_value):
+                upgrades_dict = attr_value.to_dict(orient='index')
+                recent_upgrades_dict = {}
+                for date, values in upgrades_dict.items():
+                    if date.year >= datetime.now().year - 1:
+                        recent_upgrades_dict.update({date : values})
 
-                except:
-                    continue
+                upgrades = {
+                    str(k): v for k, v in recent_upgrades_dict.items()
+                }
 
-                if not self.summary:
-                    self.summary = {"msg" : "Ticker doesn't exist. Please provide a valid stock ticker"}
+                self.summary.update({"Upgrades & downgrades" : upgrades})
 
-                return self.summary
+        def _recommendations(self, attr_value):
+            self.summary.update({'recommendations' : {}})
+            recommendations_dict = attr_value.to_dict(orient='index')
+            for (key, value) in recommendations_dict.items():
+                _ = value.pop('period')
+                self.summary['recommendations'].update({f'{key}-Month' : value})
+
+        def _analyst_price_targets(self, attr_value, ticker_uppercase):
+            conclusion = None
+            if attr_value['current'] < attr_value['low']:
+                conclusion = f'{ticker_uppercase} trades lower than low target! seems undervalued.'
+            elif attr_value['current'] >= attr_value['high']:
+                conclusion = f'{ticker_uppercase} trades higher than high target! seems overvalued.'
+            else:
+                conclusion = f'{ticker_uppercase} trades within range.'
+            
+            reccomendation_and_conclusion = (attr_value, conclusion)
+
+            self.summary.update({'Price targets' : reccomendation_and_conclusion})
+        
+        def _not_news_attr_handeling(self, attr, attr_value, ticker_uppercase):
+            if attr == 'analyst_price_targets':
+                self._analyst_price_targets(attr_value, ticker_uppercase)
+
+            elif attr == 'recommendations_summary':
+                self._recommendations(attr_value)
+
+            elif attr == 'upgrades_downgrades':
+                self._upgrades_downgrades(attr_value)
+
 
     class Finviz(Source):       
         def get_ticker_info(self, ticker: str):
@@ -380,12 +332,7 @@ class TickerAnalyzer:
                 stock = finvizfinance(ticker.upper())
                 data = stock.ticker_full_info()
                 
-                for attr in  ['Index', 'Perf Week','EPS next Y','Insider Trans','Perf Month','EPS next Q','Short Float','Shs Float',
-                            'Perf Quarter','EPS this Y','Inst Trans','Perf Half Y','Book/sh','EPS next 5Y','ROE','Perf YTD',
-                            'EPS past 5Y','ROI','52W High','Quick Ratio','Sales past 5Y','52W Low','ATR (14)','Current Ratio',
-                            'EPS Y/Y TTM','RSI (14)','Volatility W','Volatility M','Sales Y/Y TTM','Recom','Option/Short','LT Debt/Eq',
-                            'EPS Q/Q','Payout','Rel Volume','Prev Close','Sales Surprise','EPS Surprise','Sales Q/Q','EPS next Y Percentage',
-                            'ROA','Short Interest','Perf Year','Avg Volume','SMA20','SMA50','SMA200','Trades','Volume','Change']:
+                for attr in tickers_constants.FINVIZ_ATTR_LIST:
                     try:
                         _ = data['fundament'].pop(attr)
                     except:
@@ -395,39 +342,8 @@ class TickerAnalyzer:
 
                 curr_date = datetime.now()
 
-                upgrades_dict = data['ratings_outer'].to_dict(orient='index')
-                recent_upgrades_dict = {}
-                for key, values in upgrades_dict.items():
-                    date = values.pop('Date')
-                    updgrade_downgrade_year = int(date.year)
-                    if updgrade_downgrade_year >= curr_date.year - 1:
-                        recent_upgrades_dict.update({date : values})
-
-                upgrades = {
-                    str(k): v for k, v in recent_upgrades_dict.items()
-                }
-
-                self.summary.update({'Upgrades/Downgrades' : upgrades})
-
-                news_dict = data['news'].to_dict(orient='index')
-                recent_news_dict = {}
-                
-                for key, news in news_dict.items():
-                    date = news.pop('Date')
-                    news_year = date.year
-                    news_month = date.month
-                    news_day = date.day
-
-                    if ((int(news_year) == curr_date.year and int(news_month) == curr_date.month and abs(int(news_day) - curr_date.day) <= 3) or 
-                        (int(news_month) == curr_date.month - 1 and abs(curr_date.day -  int(news_day)) > 28) or
-                        (int(news_year) == curr_date.year - 1 and news_month == 12 and abs(curr_date.day -  int(news_day)) > 28)):
-                            recent_news_dict.update({date : news})
-
-                news = {
-                    str(k): v for k, v in recent_news_dict.items()
-                }
-
-                self.summary.update({'News' : news})
+                self._upgrades_downgrades(curr_date, data)
+                self._news(curr_date, data)
 
                 insiders_dict = {}
 
@@ -446,6 +362,42 @@ class TickerAnalyzer:
                 self.summary = {"msg" : f"{e}. Please provide a valid stock ticker"}
 
             return self.summary
+        
+        def _news(self, curr_date, data):
+            news_dict = data['news'].to_dict(orient='index')
+            recent_news_dict = {}
+            
+            for key, news in news_dict.items():
+                date = news.pop('Date')
+                news_year = date.year
+                news_month = date.month
+                news_day = date.day
+
+                if ((int(news_year) == curr_date.year and int(news_month) == curr_date.month and abs(int(news_day) - curr_date.day) <= 3) or 
+                    (int(news_month) == curr_date.month - 1 and abs(curr_date.day -  int(news_day)) > 28) or
+                    (int(news_year) == curr_date.year - 1 and news_month == 12 and abs(curr_date.day -  int(news_day)) > 28)):
+                        recent_news_dict.update({date : news})
+
+            news = {
+                str(k): v for k, v in recent_news_dict.items()
+            }
+
+            self.summary.update({'News' : news})
+        
+        def _upgrades_downgrades(self, curr_date, data):
+            upgrades_dict = data['ratings_outer'].to_dict(orient='index')
+            recent_upgrades_dict = {}
+            for key, values in upgrades_dict.items():
+                date = values.pop('Date')
+                updgrade_downgrade_year = int(date.year)
+                if updgrade_downgrade_year >= curr_date.year - 1:
+                    recent_upgrades_dict.update({date : values})
+
+            upgrades = {
+                str(k): v for k, v in recent_upgrades_dict.items()
+            }
+
+            self.summary.update({'Upgrades/Downgrades' : upgrades})
         
 
     class Chatgpt:
