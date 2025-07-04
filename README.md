@@ -8,7 +8,7 @@ Welcome to my collection of personal projects! This repository contains a variet
 
 Free, open-source data fetaching web application from serveral well-known stocks analysis websites. 
 
-> 📂 Path: `python/stocks_analysis`
+> 📂 Path: `python/stocks-analysis`
 
 ---
 
@@ -22,21 +22,21 @@ A generic RAG pipeline that allows you to query local document collections (PDFs
 ### 💬 Python: Client-Server Messaging App
 A simple messaging application using Musquito, allowing multiple clients to communicate with a server and with each other. Supports features like online status checks, file transfer, and graceful disconnection with signal handling.
 
-> 📂 Path: `python/client_server_app`
+> 📂 Path: `python/mosquito-server-client-messaging`
 
 ---
 
 ### 🧍‍♂️ Python: AI Computer Vision Demo
 An AI-driven application that collects patient information and performs pose estimation on a video from a camera.
 
-> 📂 Path: `python/ai_cv_demo`
+> 📂 Path: `python/computer-vision-detection/ai-cv`
 
 ---
 
 ### 🎥 Python: Classic AI Computer Vision
 Processes input videos for people detection and face bluring for privacy protection. Uses classical computer vision techniques.
 
-> 📂 Path: `python/classic_cv`
+> 📂 Path: `python/computer-vision-detection/classic-cv`
 
 ---
 
