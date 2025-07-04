@@ -51,7 +51,7 @@ username:message          # Send message from one user to another via the server
 /file user filepath       # Send file to user directly
 
 
-📎 Example Session
+#### 📎 Example Session
 1. Start the server
 ```bash
 python3 server.py
