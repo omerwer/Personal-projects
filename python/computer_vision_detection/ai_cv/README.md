@@ -50,7 +50,6 @@ database.json
 ## 📂 Project Layout
 
 ```
-.
 ├─ activity.py
 ├─ db.py
 ├─ main.py
@@ -70,8 +69,8 @@ database.json
 1. **Clone & set up environment**
 
    ```bash
-   git clone <your‑repo>
-   cd <your‑repo>
+   git clone https://github.com/omerwer/Personal-projects
+   cd Personal-projects/python/computer_vision_detection/ai_cv
    python -m venv .venv
    source .venv/bin/activate     # Windows: .venv\Scripts\activate
    pip install -r requirements.txt
