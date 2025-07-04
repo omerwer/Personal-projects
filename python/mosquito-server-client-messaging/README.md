@@ -10,7 +10,8 @@ pip install -r requirements.txt
 
 ### 📁 File Structure
 
-mqtt-chat/</br>
+mqtt-chat/
+
 ├── server.py       # Central server managing registration and message routing</br>
 ├── client.py       # Client application with CLI and messaging</br>
 └── README.md       # This file</br>
