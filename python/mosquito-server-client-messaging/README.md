@@ -3,9 +3,10 @@
 This is a MQTT chat app in Python. It allows users to connect to the server, and send messages either via the server or in a direct message (DM) and also allows to send files from one user to the other
 
 ```bash
-python3 -m venv exodigo_env
-source exodigo_env/bin/activate
-pip install -r req.txt
+python3 -m venv chatapp_env
+source chatapp_env/bin/activate
+pip install -r requirements.txt
+```
 
 📁 File Structure
 
@@ -17,21 +18,28 @@ mqtt-chat/
 
 🛠️ Setup & Usage
 0. Install MQTT on Linux:
+```bash
 sudo apt-get update
 sudo apt install net-tools
 sudo apt install mosquitto mosquitto-clients
+```
 
 1. Start MQTT Broker
 If using Mosquitto locally - in one terminal:
+```bash
 sudo mosquitto
+```
 
-2. Start the Server
-In another terminal:
+2. Start the Server In another terminal:
+```bash
 python3 server.py OR ./server.py
+```
 
 3. Start Clients
 In separate terminals:
-python3 client.py OR client.py 
+```bash
+python3 client.py OR client.py
+``` 
 
 Enter a unique username when prompted. Notice that if you provide a non-unique username, you will not be able to connect.
 
