@@ -2,6 +2,14 @@
 
 Intercept incoming “missiles” with defensive "rockets"
 
+
+<p align="center">
+  <!-- Replace with a real recording or GIF if you capture one -->
+  <img src="assets/defense_game.gif" width="650" alt="ASCII gameplay demo">
+</p>
+
+---
+
 ---
 
 ## 🎮 Quick Start
