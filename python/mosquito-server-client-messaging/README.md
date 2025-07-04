@@ -53,29 +53,39 @@ username:message          # Send message from one user to another via the server
 
 📎 Example Session
 1. Start the server
+```bash
 python3 server.py
+```
 
 2. Start two clients
+```bash
 # Terminal 1
 python3 client.py
 # Enter: alice
+```
 
+```bash
 # Terminal 2
 python3 client.py
 # Enter: bob
+```
 
 2. Alice checks if Bob is connected:
+```bash
 /get bob
+```
 
 3. Alice sends Bob a message
+```bash
 bob:hi!
+```
 
 4. Bob sends Alice a direct message
+```bash
 /dm alice:hiiiii!
+```
 
 5. Alice sends Bob a file
+```bash
 /file bob ./hello.txt
-
-
-
-
+```
