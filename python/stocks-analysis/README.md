@@ -94,7 +94,7 @@ export DISPLAY=:0
 ### 1. Clone the repository
 ```bash
 git clone https://github.com/omerwer/Personal-projects.git
-cd python/stocks_analysis/
+cd python/stocks-analysis/
 ```
 
 ### 2. Create a virtual environment
