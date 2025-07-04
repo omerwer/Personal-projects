@@ -47,10 +47,10 @@ Enter a unique username when prompted. Notice that if you provide a non-unique u
 
 
 ### 💬 Client Commands
-username:message          # Send message from one user to another via the server
-/get username		  # Send a request to the server to check if a user is connected
-/dm username:message      # Direct message from a user to a user
-/file user filepath       # Send file to user directly
+ - username:message           # Send message from one user to another via the server
+ - /get username		          # Send a request to the server to check if a user is connected
+ - /dm username:message       # Direct message from a user to a user
+ - /file user filepath        # Send file to user directly
 
 
 #### 📎 Example Session
