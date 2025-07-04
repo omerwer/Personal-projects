@@ -8,7 +8,7 @@ source chatapp_env/bin/activate
 pip install -r requirements.txt
 ```
 
-📁 File Structure
+### 📁 File Structure
 
 mqtt-chat/
 ├── server.py       # Central server managing registration and message routing
@@ -16,7 +16,7 @@ mqtt-chat/
 └── README.md       # This file
 
 
-🛠️ Setup & Usage
+### 🛠️ Setup & Usage
 0. Install MQTT on Linux:
 ```bash
 sudo apt-get update
@@ -44,7 +44,7 @@ python3 client.py OR client.py
 Enter a unique username when prompted. Notice that if you provide a non-unique username, you will not be able to connect.
 
 
-💬 Client Commands
+### 💬 Client Commands
 username:message          # Send message from one user to another via the server
 /get username		  # Send a request to the server to check if a user is connected
 /dm username:message      # Direct message from a user to a user
