@@ -33,13 +33,6 @@ An AI-driven application that collects patient information and performs pose est
 
 ---
 
-### 🎥 Python: Classic AI Computer Vision
-Processes input videos for people detection and face bluring for privacy protection. Uses classical computer vision techniques.
-
-> 📂 Path: `python/computer-vision-detection/classic-cv`
-
----
-
 ### 🧨 C++: Defence Game
 An interactive game where the goal is to intercept incoming missiles. You have 1 minute to stop as many missiles as possible.
 
