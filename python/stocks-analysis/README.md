@@ -119,7 +119,7 @@ Download from [wkhtmltopdf.org](https://wkhtmltopdf.org/downloads.html)
 
 ### 4. Install dependencies
 ```bash
-pip install -r ta_installs.txt
+pip install -r requirements.txt
 ```
 
 ### 5. Run the backend server
