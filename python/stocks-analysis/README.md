@@ -127,5 +127,5 @@ pip install -r requirements.txt
 ./run_web.sh
 ```
 
-Server will run at: http://127.0.0.1:8000
+Server will run at: http://127.0.0.1:3000
 
