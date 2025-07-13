@@ -2,7 +2,8 @@
 
 An interactive web-based stock analyzer app built with **FastAPI** and **vanilla JavaScript + Tailwind CSS**.
 
-Query live data from **Zacks**, **TradingView**, **Yahoo Finance**, **Finviz**, and **ChatGPT** — all through a sleek frontend and Python-powered backend.
+Query live data from **Zacks**, **TradingView**, **Yahoo Finance**, **Finviz** — all through a sleek frontend and Python-powered backend.<br/>
+The **ChatGPT** option performs query on all of the above sources and gives a general overview of the stock according to the collected data from those sources.
 
 ---
 
@@ -36,7 +37,7 @@ Always conduct your own research and consult a licensed financial advisor before
   - TradingView
   - Yahoo Finance
   - Finviz
-- 🧠 Generate stock-specific insights using a custom **ChatGPT prompt**
+- 🧠 Generate stock-specific insights from the above sources using a custom **ChatGPT prompt**
 - 🌐 Clean and responsive UI with Tailwind CSS
 - 📈 Automatically renders JSON responses into human-readable HTML
 - 🔗 Hyperlink and Markdown support for rich text formatting
@@ -70,13 +71,16 @@ Always conduct your own research and consult a licensed financial advisor before
 
 ## 🖼️ UI Preview
 
-> Enter a ticker symbol (notice that actual company name will not work), click a data source, and get back structured financial data. You can also submit a free-form ChatGPT prompt for a specific ticker.
+> Enter a ticker symbol (notice that actual company name will not work), click a data source, and get back structured financial data.
 
 ---
 
 ## 📁 Project Structure
 
-├── main.py # FastAPI backend </br>
+├── app.py # FastAPI backend </br>
+├── ticker constants.py # Holding constants for backend usage </br>
+├── run_web.sh # Run the web app </br>
+├── requirements.txt # Prerequisites for pip install </br>
 ├── static/</br>
 │ ├── index.html # Main frontend page </br>
 │ ├── images/ # For Zacks image assets </br>
