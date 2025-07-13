@@ -11,6 +11,7 @@ from tradingview_ta import TA_Handler, Interval
 import yfinance as yf
 from datetime import datetime
 import pytesseract
+from concurrent.futures import ThreadPoolExecutor
 import re
 from finvizfinance.quote import finvizfinance
 from g4f.client import Client
@@ -271,7 +272,7 @@ class TickerAnalyzer:
             forecast_url = url + 'forecast/'
 
             options = {
-                'javascript-delay': '10000',
+                'javascript-delay': '5000',
                 'load-error-handling': 'ignore',
                 'no-stop-slow-scripts': '',
                 'enable-javascript': '',
@@ -287,9 +288,20 @@ class TickerAnalyzer:
             scale_x = width / 1920
             scale_y = height / 1080
 
-            self._render_imgkit(url, config, options, (15 * scale_x, 1375 * scale_y, 315 * scale_x, 2600 * scale_y), 'ks', stats_and_price_target)
-            self._render_imgkit(forecast_url, config, options, (19 * scale_x, 654 * scale_y, 199 * scale_x, 732 * scale_y), 'forecast', stats_and_price_target, analysis)
-
+            with ThreadPoolExecutor() as executor:
+                executor.submit(
+                    self._render_imgkit,
+                    url, config, options,
+                    (15 * scale_x, 1375 * scale_y, 315 * scale_x, 2600 * scale_y),
+                    'ks', stats_and_price_target
+                )
+                executor.submit(
+                    self._render_imgkit,
+                    forecast_url, config, options,
+                    (19 * scale_x, 654 * scale_y, 199 * scale_x, 732 * scale_y),
+                    'forecast', stats_and_price_target, analysis
+                )
+            
             self.summary.update(stats_and_price_target)
                      
 
@@ -360,9 +372,9 @@ class TickerAnalyzer:
 
         def _analyst_price_targets(self, attr_value, ticker_uppercase):
             conclusion = None
-            if attr_value['current'] < attr_value['low']:
+            if 'low' in attr_value and attr_value['current'] < attr_value['low']:
                 conclusion = f'{ticker_uppercase} trades lower than low target! seems undervalued.'
-            elif attr_value['current'] >= attr_value['high']:
+            elif 'high' in attr_value and attr_value['current'] >= attr_value['high']:
                 conclusion = f'{ticker_uppercase} trades higher than high target! seems overvalued.'
             else:
                 conclusion = f'{ticker_uppercase} trades within range.'
@@ -441,19 +453,22 @@ class TickerAnalyzer:
             self.summary.update({'News' : news})
         
         def _upgrades_downgrades(self, curr_date, data):
-            upgrades_dict = data['ratings_outer'].to_dict(orient='index')
-            recent_upgrades_dict = {}
-            for key, values in upgrades_dict.items():
-                date = values.pop('Date')
-                updgrade_downgrade_year = int(date.year)
-                if updgrade_downgrade_year >= curr_date.year - 1:
-                    recent_upgrades_dict.update({date : values})
+            if 'ratings_outer' not in data:
+                self.summary.update({'Upgrades/Downgrades' : {}})
+            else:
+                upgrades_dict = data['ratings_outer'].to_dict(orient='index')
+                recent_upgrades_dict = {}
+                for key, values in upgrades_dict.items():
+                    date = values.pop('Date')
+                    updgrade_downgrade_year = int(date.year)
+                    if updgrade_downgrade_year >= curr_date.year - 1:
+                        recent_upgrades_dict.update({date : values})
 
-            upgrades = {
-                str(k): v for k, v in recent_upgrades_dict.items()
-            }
+                upgrades = {
+                    str(k): v for k, v in recent_upgrades_dict.items()
+                }
 
-            self.summary.update({'Upgrades/Downgrades' : upgrades})
+                self.summary.update({'Upgrades/Downgrades' : upgrades})
         
 
     class Chatgpt:
