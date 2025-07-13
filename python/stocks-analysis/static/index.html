@@ -40,12 +40,7 @@
       <button class="bg-green-600 hover:bg-green-700 text-white py-2 rounded-lg shadow flex items-center justify-center gap-1" onclick="fetchData('TradingView')">📗 TradingView</button>
       <button class="bg-purple-600 hover:bg-purple-700 text-white py-2 rounded-lg shadow flex items-center justify-center gap-1" onclick="fetchData('YahooFinance')">🟣 Yahoo Finance</button>
       <button class="bg-yellow-600 hover:bg-yellow-700 text-white py-2 rounded-lg shadow flex items-center justify-center gap-1" onclick="fetchData('Finviz')">🟡 Finviz</button>
-      <button class="bg-gray-800 hover:bg-gray-900 text-white py-2 rounded-lg shadow flex items-center justify-center gap-1" onclick="prepareChatPrompt()">🤖 ChatGPT</button>
-    </div>
-
-    <div id="chatgpt-prompt" class="mb-4 hidden animate-fadeIn">
-      <textarea id="prompt" rows="4" class="w-full p-3 border rounded-lg shadow-sm" placeholder=""></textarea>
-      <button class="mt-2 bg-indigo-600 hover:bg-indigo-700 text-white py-2 px-4 rounded-lg shadow" onclick="sendChatPrompt()">Submit Prompt</button>
+       <button class="bg-gray-800 hover:bg-gray-900 text-white py-2 rounded-lg shadow flex items-center justify-center gap-1" onclick="fetchData('ChatGPT')">🤖 ChatGPT</button>
     </div>
 
     <div class="mt-4">
@@ -80,11 +75,14 @@
 
       const output = document.getElementById('output');
       output.innerHTML = `<div class="text-blue-500 animate-pulse">🔄 Fetching data from ${source}...</div>`;
-      document.getElementById('chatgpt-prompt').classList.add('hidden');
       document.getElementById('result-img').classList.add('hidden');
 
       try {
-        const res = await fetch(`/${source}/${t}`);
+        const res = await fetch(`/${source}/${t}`, {
+          method: source === 'ChatGPT' ? 'POST' : 'GET',
+          headers: { 'Content-Type': 'application/json' },
+          body: source === 'ChatGPT' ? JSON.stringify({ prompt: "auto" }) : undefined
+        });
         if (!res.ok) throw new Error(`Error fetching ${source}: ${res.statusText}`);
         const data = await res.json();
         const s = data.summary;
@@ -144,130 +142,6 @@
         } else {
           img.classList.add('hidden');
         }
-
-      } catch (error) {
-        output.innerHTML = `<div class="text-red-600 font-semibold">❌ Error: ${error.message}</div>`;
-        document.getElementById('chatgpt-prompt').classList.add('hidden');
-        document.getElementById('result-img').classList.add('hidden');
-      }
-    }
-
-    function prepareChatPrompt() {
-      const ticker = document.getElementById('ticker').value.trim();
-      if (!ticker) return alert('Enter ticker');
-
-      const example = `Example prompt: Provide a stock analysis for ${ticker.toUpperCase()} (ticker ${ticker.toLowerCase()})`;
-      const promptElem = document.getElementById('prompt');
-      promptElem.placeholder = example;
-      promptElem.value = '';
-
-      document.getElementById('chatgpt-prompt').classList.remove('hidden');
-      document.getElementById('output').innerHTML = `<div class="text-gray-500">🧠 Enter your prompt and click "Submit Prompt"...</div>`;
-      document.getElementById('result-img').classList.add('hidden');
-    }
-
-    async function sendChatPrompt() {
-      const ticker = document.getElementById('ticker').value.trim();
-      const prompt = document.getElementById('prompt').value.trim();
-      const output = document.getElementById('output');
-
-      if (!ticker || !prompt) return alert('Enter both ticker and prompt.');
-
-      output.innerHTML = `<div class="text-gray-500">💬 Loading ChatGPT response...</div>`;
-
-      try {
-        const res = await fetch(`/ChatGPT/${ticker}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ prompt })
-        });
-
-        if (!res.ok) {
-          const errData = await res.json();
-          throw new Error(errData.error || 'Unknown error');
-        }
-
-        const data = await res.json();
-        const summary = data.summary;
-
-        // Function to convert markdown-like text into nested HTML with headings
-        function GPTmarkdownToHtml(text) {
-          if (!text) return '';
-
-          // Replace main headings (###, ##, #) - larger to smaller
-          text = text
-            .replace(/^### (.*)$/gm, '<h2 class="text-xl font-bold mt-6 mb-2">$1</h2>')
-            .replace(/^## (.*)$/gm, '<h3 class="text-lg font-semibold mt-5 mb-1">$1</h3>')
-            .replace(/^# (.*)$/gm, '<h1 class="text-2xl font-extrabold mt-7 mb-3">$1</h1>');
-
-          // Replace numbered bold list items like "10. **Risk Factors**" as sub-headings
-          // This regex finds lines starting with digits and dot + space + **text**
-          text = text.replace(
-            /^(\d+)\.\s+\*\*(.+)\*\*/gm,
-            (_, num, heading) =>
-              `<h4 class="text-md font-semibold mt-3 mb-1">${num}. ${heading}</h4>`
-          );
-
-          // Convert **bold** and *italic*
-          text = text
-            .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-            .replace(/\*(.+?)\*/g, '<em>$1</em>');
-
-          // Convert links [text](url)
-          text = text
-            .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a class="text-blue-600 underline" href="$2" target="_blank">$1</a>')
-            .replace(/(https?:\/\/[^\s<>"']+)/g, '<a class="text-blue-600 underline" href="$1" target="_blank">$1</a>');
-
-          // Replace newlines with <br> for line breaks
-          text = text.replace(/\n/g, '<br>');
-
-          return text;
-        }
-
-        function renderFields(obj, level = 0) {
-          if (typeof obj === 'string' || typeof obj === 'number' || typeof obj === 'boolean') {
-            if (typeof obj === 'string') {
-              return `<div class="ml-${level * 4}" style="white-space: pre-wrap;">${GPTmarkdownToHtml(obj)}</div>`;
-            }
-            return `<div class="ml-${level * 4}">${obj}</div>`;
-          } else if (Array.isArray(obj)) {
-            return obj.map(item => `<div class="ml-${level * 4}">${renderFields(item, level + 1)}</div>`).join('');
-          } else if (typeof obj === 'object' && obj !== null) {
-            return Object.entries(obj)
-              .map(([k, v]) => {
-                if (typeof v === 'object' && v !== null) {
-                  return `<div class="ml-${level * 4}">
-                            <span class="font-semibold text-gray-800">${k}:</span>
-                            <div class="ml-4">${renderFields(v, level + 1)}</div>
-                          </div>`;
-                }
-                const valueHtml = (typeof v === 'string') ? GPTmarkdownToHtml(v) : v;
-
-                const multiline = typeof v === 'string' && /^[\s:*\-]/.test(v.trim());
-                if (multiline) {
-                  return `<div class="ml-${level * 4} font-medium text-gray-700">${k}:</div>
-                          <div class="ml-${(level + 1) * 4}">${valueHtml}</div>`;
-                }
-
-                return `<div class="ml-${level * 4}"><span class="font-medium text-gray-700">${k}:</span> ${valueHtml}</div>`;
-              })
-              .join('');
-          }
-          return '';
-        }
-
-        function renderCard(title, fields) {
-          return `
-            <div class="bg-white border border-gray-300 rounded-lg shadow p-4 mb-4 animate-fadeIn max-w-full overflow-auto">
-              ${title ? `<h2 class="text-2xl font-bold text-blue-900 mb-4">${title}</h2>` : ''}
-              <div class="space-y-3">${renderFields(fields)}</div>
-            </div>
-          `;
-        }
-
-        output.innerHTML = renderCard("ChatGPT Analysis", summary);
-        document.getElementById('chatgpt-prompt').classList.add('hidden');
-        document.getElementById('result-img').classList.add('hidden');
 
       } catch (error) {
         output.innerHTML = `<div class="text-red-600 font-semibold">❌ Error: ${error.message}</div>`;

@@ -21,8 +21,6 @@ pytesseract.pytesseract.tesseract_cmd = "/usr/bin/tesseract"
 
 
 def get_screen_size():
-    if os.environ.get("ENV") == "render":
-        return (1920, 1080)
     try:
         import pyautogui
         return pyautogui.size()
@@ -32,31 +30,89 @@ def get_screen_size():
 
 class TickerAnalyzer:
     def __init__(self):
-        self.zacks = None
-        self.tv = None
-        self.yf = None
-        self.finviz = None
-        self.chatgpt = None
+        self.curr_ticker = ""
+        self.cache = {"zacks" : {}, "tv" : {}, "yf" : {}, "finviz" : {}, "chatgpt" : {}}
+        self.zacks = self.Zacks()
+        self.tv = self.Tradingview()
+        self.yf = self.YahooFinance()
+        self.finviz = self.Finviz()
+        self.chatgpt = self.Chatgpt()
 
     def get_zacks_info(self, ticker: str):
-        self.zacks = self.Zacks()
-        return self.zacks.get_ticker_info(ticker)
+        if self.cache["zacks"] and ticker in self.cache["zacks"].keys():
+            return self.cache["zacks"][ticker]
+        else:
+            zacks_ret =  self.zacks.get_ticker_info(ticker)
+            if len(self.cache["zacks"]) == 20:
+                _, _ = self.cache["zacks"].popitem(last=False)
+            self.cache["zacks"].update({ticker : zacks_ret})
+
+            return zacks_ret
 
     def get_tradingview_info(self, ticker: str):
-        self.tv = self.Tradingview()
-        return self.tv.get_ticker_info(ticker)
+        if self.cache["tv"] and ticker in self.cache["tv"].keys():
+            return self.cache["tv"][ticker]
+        else:
+            tv_ret =  self.tv.get_ticker_info(ticker)
+            if len(self.cache["tv"]) == 20:
+                _, _ = self.cache["tv"].popitem(last=False)
+            self.cache["tv"].update({ticker : tv_ret})
+
+            return tv_ret
     
     def get_yf_info(self, ticker: str):
-        self.yf = self.YahooFinance()
-        return self.yf.get_ticker_info(ticker)
+        if self.cache["yf"] and ticker in self.cache["yf"].keys():
+            return self.cache["yf"][ticker]
+        else:
+            yf_ret = self.yf.get_ticker_info(ticker)
+            if len(self.cache["yf"]) == 20:
+                _, _ = self.cache["yf"].popitem(last=False)
+            self.cache["yf"].update({ticker : yf_ret})
+
+            return yf_ret
+
     
     def get_finviz_info(self, ticker: str):
-        self.finviz = self.Finviz()
-        return self.finviz.get_ticker_info(ticker)
+        if self.cache["finviz"] and ticker in self.cache["finviz"].keys():
+            return self.cache["finviz"][ticker]
+        else:
+            finviz_ret = self.finviz.get_ticker_info(ticker)
+            if len(self.cache["finviz"]) == 20:
+                _, _ = self.cache["finviz"].popitem(last=False)
+            self.cache["finviz"].update({ticker : finviz_ret})
+
+            return finviz_ret
+        
     
     def get_chatgpt_info(self, ticker: str, prompt: str):
-        self.chatgpt = self.Chatgpt()
-        return self.chatgpt.get_ticker_info(ticker, prompt)
+        if self.cache["chatgpt"] and ticker in self.cache["chatgpt"].keys():
+            return self.cache["chatgpt"][ticker]
+        else:
+            for source in self.cache.keys():
+                if ticker not in self.cache[source]:
+                    if source == 'zacks':
+                        zack_ret = self.zacks.get_ticker_info(ticker)
+                        self.cache[source].update({ticker : zack_ret})
+                    if source == 'tv':
+                        tv_ret = self.tv.get_ticker_info(ticker)
+                        self.cache[source].update({ticker : tv_ret})
+                    if source == 'yf':
+                        yf_ret = self.yf.get_ticker_info(ticker)
+                        self.cache[source].update({ticker : yf_ret})
+                    if source == 'finviz':
+                        finviz_ret = self.finviz.get_ticker_info(ticker)
+                        self.cache[source].update({ticker : finviz_ret})
+
+            chatgpt_ret = self.chatgpt.get_ticker_info(ticker, 
+                                                       self.cache["zacks"][ticker], 
+                                                       self.cache["tv"][ticker],
+                                                       self.cache["yf"][ticker],
+                                                       self.cache["finviz"][ticker])
+            if len(self.cache["chatgpt"]) == 20:
+                _, _ = self.cache["chatgpt"].popitem(last=False)
+            self.cache["chatgpt"].update({ticker : chatgpt_ret})
+
+            return chatgpt_ret
 
 
     class Source(ABC):
@@ -401,6 +457,32 @@ class TickerAnalyzer:
         
 
     class Chatgpt:
+        def _format_dict(self, name: str, data: dict) -> str:
+            if not data:
+                return f"## {name} Data:\nNo data available.\n"
+            
+            formatted = f"## {name} Data:\n"
+            for key, value in data.items():
+                formatted += f"- {key}: {value}\n"
+            return formatted + "\n"
+
+        def _build_prompt(self, ticker: str, zacks: dict, tv: dict, yf: dict, finviz: dict) -> str:
+            sections = [
+                self._format_dict("Zacks", zacks),
+                self._format_dict("TradingView", tv),
+                self._format_dict("Yahoo Finance", yf),
+                self._format_dict("Finviz", finviz)
+            ]
+
+            return f"""You are a professional financial analyst. Analyze the stock {ticker.upper()}
+            using the following structured data from four sources: {''.join(sections)}. 
+            Please provide:
+            1. A concise summary of the stock's financial and technical status.
+            2. Key strengths and weaknesses found in the data.
+            3. A clear investment recommendation (e.g., Strong Buy, Buy, Hold, Sell, Strong Sell).
+            4. A one-sentence justification for your recommendation.
+            """
+
         def _send_prompt(self, ticker, prompt):
             if not prompt:
                 raise ValueError("Prompt is required.")
@@ -415,7 +497,8 @@ class TickerAnalyzer:
             )
             return response.choices[0].message.content
 
-        def get_ticker_info(self, ticker: str, prompt: str):
+        def get_ticker_info(self, ticker: str, zacks: dict, tv: dict, yf: dict, finviz: dict):
+            prompt = self._build_prompt(ticker, zacks, tv, yf, finviz)
             return self._send_prompt(ticker, prompt)
         
 
