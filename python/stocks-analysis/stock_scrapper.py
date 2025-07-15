@@ -89,23 +89,23 @@ class TickerAnalyzer:
         if self.cache["chatgpt"] and ticker in self.cache["chatgpt"].keys():
             return self.cache["chatgpt"][ticker]
         
-        tasks = {}
+        source_methods = {
+            'zacks': self.zacks,
+            'tv': self.tv,
+            'yf': self.yf,
+            'finviz': self.finviz
+        }
 
-        with ProcessPoolExecutor() as executor:
-            for source in self.cache.keys():
+        futures = {}
+        with ThreadPoolExecutor() as executor:
+            for source, obj in source_methods.items():
                 if ticker not in self.cache[source]:
-                    if source == 'zacks':
-                        tasks[source] = executor.submit(self.zacks.get_ticker_info, ticker)
-                    elif source == 'tv':
-                        tasks[source] = executor.submit(self.tv.get_ticker_info, ticker)
-                    elif source == 'yf':
-                        tasks[source] = executor.submit(self.yf.get_ticker_info, ticker)
-                    elif source == 'finviz':
-                        tasks[source] = executor.submit(self.finviz.get_ticker_info, ticker)
+                    futures[source] = executor.submit(obj.get_ticker_info, ticker)
 
-        for source, future in tasks.items():
+        # Collect and store results
+        for source, future in futures.items():
             try:
-                result = future.result()
+                result = future.result()  # wait for thread
                 self.cache[source][ticker] = result
             except Exception as e:
                 self.cache[source][ticker] = {"error": str(e)}
@@ -298,18 +298,21 @@ class TickerAnalyzer:
             scale_y = height / 1080
 
             with ThreadPoolExecutor() as executor:
-                executor.submit(
+                future_ks  = executor.submit(
                     self._render_imgkit,
                     url, config, options,
                     (15 * scale_x, 1375 * scale_y, 315 * scale_x, 2600 * scale_y),
                     'ks', stats_and_price_target
                 )
-                executor.submit(
+                future_forecast = executor.submit(
                     self._render_imgkit,
                     forecast_url, config, options,
                     (19 * scale_x, 654 * scale_y, 199 * scale_x, 732 * scale_y),
                     'forecast', stats_and_price_target, analysis
                 )
+
+            future_ks.result()
+            future_forecast.result()
             
             self.summary.update(stats_and_price_target)
                      
