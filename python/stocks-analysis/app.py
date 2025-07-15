@@ -97,7 +97,7 @@ async def chatgpt(ticker: str, request: Request):
         if not prompt:
             return JSONResponse(status_code=400, content={"error": "Prompt is required."})
 
-        summary = ta.get_chatgpt_info(ticker, prompt)
+        summary = ta.get_chatgpt_info(ticker)
         return JSONResponse({"summary": sanitize_for_json(summary)})
 
     except Exception as e:

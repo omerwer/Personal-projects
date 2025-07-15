@@ -11,7 +11,7 @@ from tradingview_ta import TA_Handler, Interval
 import yfinance as yf
 from datetime import datetime
 import pytesseract
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor, as_completed
 import re
 from finvizfinance.quote import finvizfinance
 from g4f.client import Client
@@ -83,38 +83,47 @@ class TickerAnalyzer:
             self.cache["finviz"].update({ticker : finviz_ret})
 
             return finviz_ret
-        
+
     
-    def get_chatgpt_info(self, ticker: str, prompt: str):
+    def get_chatgpt_info(self, ticker: str):
         if self.cache["chatgpt"] and ticker in self.cache["chatgpt"].keys():
             return self.cache["chatgpt"][ticker]
-        else:
+        
+        tasks = {}
+
+        with ProcessPoolExecutor() as executor:
             for source in self.cache.keys():
                 if ticker not in self.cache[source]:
                     if source == 'zacks':
-                        zack_ret = self.zacks.get_ticker_info(ticker)
-                        self.cache[source].update({ticker : zack_ret})
-                    if source == 'tv':
-                        tv_ret = self.tv.get_ticker_info(ticker)
-                        self.cache[source].update({ticker : tv_ret})
-                    if source == 'yf':
-                        yf_ret = self.yf.get_ticker_info(ticker)
-                        self.cache[source].update({ticker : yf_ret})
-                    if source == 'finviz':
-                        finviz_ret = self.finviz.get_ticker_info(ticker)
-                        self.cache[source].update({ticker : finviz_ret})
+                        tasks[source] = executor.submit(self.zacks.get_ticker_info, ticker)
+                    elif source == 'tv':
+                        tasks[source] = executor.submit(self.tv.get_ticker_info, ticker)
+                    elif source == 'yf':
+                        tasks[source] = executor.submit(self.yf.get_ticker_info, ticker)
+                    elif source == 'finviz':
+                        tasks[source] = executor.submit(self.finviz.get_ticker_info, ticker)
 
-            chatgpt_ret = self.chatgpt.get_ticker_info(ticker, 
-                                                       self.cache["zacks"][ticker], 
-                                                       self.cache["tv"][ticker],
-                                                       self.cache["yf"][ticker],
-                                                       self.cache["finviz"][ticker])
-            if len(self.cache["chatgpt"]) == 20:
-                _, _ = self.cache["chatgpt"].popitem(last=False)
-            self.cache["chatgpt"].update({ticker : chatgpt_ret})
+        for source, future in tasks.items():
+            try:
+                result = future.result()
+                self.cache[source][ticker] = result
+            except Exception as e:
+                self.cache[source][ticker] = {"error": str(e)}
 
-            return chatgpt_ret
+        chatgpt_ret = self.chatgpt.get_ticker_info(
+            ticker,
+            self.cache["zacks"][ticker],
+            self.cache["tv"][ticker],
+            self.cache["yf"][ticker],
+            self.cache["finviz"][ticker],
+        )
 
+        if len(self.cache["chatgpt"]) == 20:
+            self.cache["chatgpt"].popitem(last=False)
+
+        self.cache["chatgpt"][ticker] = chatgpt_ret
+        return chatgpt_ret 
+    
 
     class Source(ABC):
         def __init__(self):
@@ -496,6 +505,7 @@ class TickerAnalyzer:
             2. Key strengths and weaknesses found in the data.
             3. A clear investment recommendation (e.g., Strong Buy, Buy, Hold, Sell, Strong Sell).
             4. A one-sentence justification for your recommendation.
+            Remember to mention in capital letters that what you provide is not a financial advice before you analysis.
             """
 
         def _send_prompt(self, ticker, prompt):
