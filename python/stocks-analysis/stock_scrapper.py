@@ -102,10 +102,9 @@ class TickerAnalyzer:
                 if ticker not in self.cache[source]:
                     futures[source] = executor.submit(obj.get_ticker_info, ticker)
 
-        # Collect and store results
         for source, future in futures.items():
             try:
-                result = future.result()  # wait for thread
+                result = future.result()
                 self.cache[source][ticker] = result
             except Exception as e:
                 self.cache[source][ticker] = {"error": str(e)}
