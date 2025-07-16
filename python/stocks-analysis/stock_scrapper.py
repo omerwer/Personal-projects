@@ -98,20 +98,29 @@ class TickerAnalyzer:
         }
 
         futures = {}
+        non_valid_count = 0
         with ThreadPoolExecutor() as executor:
             for source, obj in source_methods.items():
                 if ticker not in self.cache[source]:
                     futures[source] = executor.submit(obj.get_ticker_info, ticker)
+
+        non_valid_msg = {"msg" : f"{ticker.upper()} is not a valid stock ticker. Please provide a valid stock ticker"}
         
         for source, future in futures.items():
             try:
                 result = future.result()
-                if result == {"msg" : f"{ticker.upper()} is not a valid stock ticker. Please provide a valid stock ticker"}:
-                    return result
+                if result == non_valid_msg:
+                    non_valid_count+=1
                 self.cache[source][ticker] = result
             except Exception as e:
                 self.cache[source][ticker] = {"error": str(e)}
 
+        if non_valid_count == len(source_methods):
+            non_valid_count = 0
+            return non_valid_msg
+
+        non_valid_count = 0
+        
         chatgpt_ret = self.chatgpt.get_ticker_info(
             ticker,
             self.cache["zacks"][ticker],
