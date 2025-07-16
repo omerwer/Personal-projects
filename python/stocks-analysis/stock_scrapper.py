@@ -11,7 +11,7 @@ from tradingview_ta import TA_Handler, Interval
 import yfinance as yf
 from datetime import datetime
 import pytesseract
-from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor, as_completed
+from concurrent.futures import ThreadPoolExecutor
 import re
 from finvizfinance.quote import finvizfinance
 from g4f.client import Client
@@ -27,7 +27,7 @@ def get_screen_size():
         return pyautogui.size()
     except Exception as e:
         return (1920, 1080)
-    
+
 
 class TickerAnalyzer:
     def __init__(self):
@@ -44,9 +44,10 @@ class TickerAnalyzer:
             return self.cache["zacks"][ticker]
         else:
             zacks_ret =  self.zacks.get_ticker_info(ticker)
-            if len(self.cache["zacks"]) == 20:
-                _, _ = self.cache["zacks"].popitem(last=False)
-            self.cache["zacks"].update({ticker : zacks_ret})
+            if "msg" not in zacks_ret.keys():
+                if len(self.cache["zacks"]) == 20:
+                    _, _ = self.cache["zacks"].popitem(last=False)
+                self.cache["zacks"].update({ticker : zacks_ret})
 
             return zacks_ret
 
@@ -101,10 +102,12 @@ class TickerAnalyzer:
             for source, obj in source_methods.items():
                 if ticker not in self.cache[source]:
                     futures[source] = executor.submit(obj.get_ticker_info, ticker)
-
+        
         for source, future in futures.items():
             try:
                 result = future.result()
+                if result == {"msg" : f"{ticker.upper()} is not a valid stock ticker. Please provide a valid stock ticker"}:
+                    return result
                 self.cache[source][ticker] = result
             except Exception as e:
                 self.cache[source][ticker] = {"error": str(e)}
@@ -131,31 +134,45 @@ class TickerAnalyzer:
     
     class Zacks(Source):
         def get_ticker_info(self, ticker: str):
-            try:
-                data_dict = {}
+            data_dict = {}
 
-                self.ticker = ticker.upper()
+            self.ticker = ticker.upper()
 
-                image = self._get_zacks_styles_score_image(self.ticker)
+            url = f"https://quote-feed.zacks.com/index.php?t={self.ticker}"
 
-                response = requests.get(url=f"https://quote-feed.zacks.com/index.php?t={self.ticker}")
-                data = dict(response.json())[self.ticker]
-                data_dict.update({'name' : data['name']})
-                data_dict.update({'ticker' : data['ticker']})
-                data_dict.update({'zacks rank' : f"{data['zacks_rank']} ({data['zacks_rank_text']})"})
-                data_dict.update({"Forward P/E" : data['source']['sungard']["pe_ratio"]})
+            if not self._is_valid_zacks_ticker(url, self.ticker):
+                self.summary = {"msg" : f"{ticker.upper()} is not a valid stock ticker. Please provide a valid stock ticker"}
+            else:
+                try:
+                    image = self._get_zacks_styles_score_image(self.ticker)
 
-                data_dict.update({"dividend_freq" : data['source']['sungard']["dividend_freq"]})
-                data_dict.update({'dividend_yield' : data['dividend_yield']+'%'})
-                data_dict.update({"dividend" : data['source']['sungard']["dividend"]})
-                data_dict.update({"image" : image})
+                    response = requests.get(url=url)
+                    data = dict(response.json())[self.ticker]
+                    data_dict.update({'name' : data['name']})
+                    data_dict.update({'ticker' : data['ticker']})
+                    data_dict.update({'zacks rank' : f"{data['zacks_rank']} ({data['zacks_rank_text']})"})
+                    data_dict.update({"Forward P/E" : data['source']['sungard']["pe_ratio"]})
 
-                self.summary = data_dict
+                    data_dict.update({"dividend_freq" : data['source']['sungard']["dividend_freq"]})
+                    data_dict.update({'dividend_yield' : data['dividend_yield']+'%'})
+                    data_dict.update({"dividend" : data['source']['sungard']["dividend"]})
+                    data_dict.update({"image" : image})
+
+                    self.summary = data_dict
             
-            except Exception as e:
-                self.summary = {"msg" : f"{e}. Please provide a valid stock ticker."}
+                except Exception as e:
+                    self.summary = {"msg" : f"{e}. Please provide a valid stock ticker."}
 
             return self.summary
+        
+        def _is_valid_zacks_ticker(self, url: str, ticker: str):
+            headers = {"User-Agent": "Mozilla/5.0"}
+            try:
+                res = requests.get(url, headers=headers, timeout=5)
+                data = res.json()
+                return False if "error" in data[ticker].keys() or data["ticker"]["reason"] == "Invalid ticker" else True
+            except Exception as e:
+                return False
         
         def _get_zacks_styles_score_image(self, ticker: str):
             url = f'https://www.zacks.com/stock/quote/{ticker}?q={ticker}'
@@ -185,6 +202,7 @@ class TickerAnalyzer:
             buffer.seek(0)
             return base64.b64encode(buffer.read()).decode('utf-8')
 
+
     class Tradingview(Source):
         def __init__(self):
             super().__init__()
@@ -210,10 +228,10 @@ class TickerAnalyzer:
                 except:
                     continue
 
-                if not self.summary:
-                    self.summary = {"msg" : "Ticker doesn't exist. Please provide a valid stock ticker"}
+            if not self.summary:
+                self.summary = {"msg" : f"{ticker.upper()} is not a valid stock ticker. Please provide a valid stock ticker"}
 
-                return self.summary
+            return self.summary
             
         def _adjust_ks_string(self, ks_string_list, key_stats):
             index = 2
@@ -272,7 +290,7 @@ class TickerAnalyzer:
                         shared['Key stats'] = key_stats
 
             except Exception as e:
-                print(f"{e}, , please try again if any data is missing...")
+                print(f"{e}please try again if any data is missing...")
 
         
         def _get_tv_stats_from_image(self, ticker: str, exchange: str, analysis: dict):
@@ -334,8 +352,14 @@ class TickerAnalyzer:
                         self._news_attr_handeling(attr)
         
             except Exception as e:
-                self.summary = {"msg" : f"{e}. Please provide a valid stock ticker."}
+                print(f"Error msg: {e}.")
                 
+                
+            if not self.summary['News'] and not self.summary['recommendations'] and not self.summary['Upgrades & downgrades']:
+                price, _ = self.summary['Price target']
+                if not price:
+                    self.summary = {"msg" : f"{ticker.upper()} is not a valid stock ticker. Please provide a valid stock ticker"}
+            
             return self.summary
         
         def _news_attr_handeling(self, attr):
@@ -392,7 +416,7 @@ class TickerAnalyzer:
             
             reccomendation_and_conclusion = (attr_value, conclusion)
 
-            self.summary.update({'Price targets' : reccomendation_and_conclusion})
+            self.summary.update({'Price target' : reccomendation_and_conclusion})
         
         def _not_news_attr_handeling(self, attr, attr_value, ticker_uppercase):
             if attr == 'analyst_price_targets':
@@ -409,6 +433,7 @@ class TickerAnalyzer:
         def get_ticker_info(self, ticker: str):
             try:
                 stock = finvizfinance(ticker.upper())
+                                
                 data = stock.ticker_full_info()
                 
                 for attr in tickers_constants.FINVIZ_ATTR_LIST:
@@ -438,7 +463,8 @@ class TickerAnalyzer:
                 self.summary.update({'Insiders trading' : insiders})
             
             except Exception as e:
-                self.summary = {"msg" : f"{e}. Please provide a valid stock ticker"}
+                print(f"Error msg: {e}")
+                self.summary = {"msg" : f"{ticker.upper()} is not a valid stock ticker. Please provide a valid stock ticker"}
 
             return self.summary
         
@@ -520,7 +546,7 @@ class TickerAnalyzer:
             response = client.chat.completions.create(
                 model="gpt-4o-mini",
                 messages=[{"role": "user", "content": prompt}],
-                web_search=True
+                web_search=False
             )
             return response.choices[0].message.content
 

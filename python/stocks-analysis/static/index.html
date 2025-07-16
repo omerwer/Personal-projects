@@ -118,7 +118,12 @@
 
         let html = '';
         if (s) {
-          if (source.toLowerCase() === 'zacks') {
+          const msg = s?.msg || s?.error;
+          const isError = Object.keys(s).length === 1 && msg && typeof msg === 'string';
+
+          if (isError) {
+            html = `<div class="bg-red-100 text-red-700 p-4 rounded-md shadow animate-fadeIn">⚠️ ${msg}</div>`;
+          } else if (source.toLowerCase() === 'zacks') {
             html += renderCard(`${s.name || ''} (${s.ticker || ''})`, {
               'Zacks Rank': s['zacks rank'],
               'Forward P/E': s['Forward P/E'],
