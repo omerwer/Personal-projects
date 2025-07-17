@@ -3,16 +3,19 @@ import requests
 from abc import ABC
 
 import imgkit
-import os
+import re
+import random
+import time
 from io import BytesIO
 import base64
-from PIL import Image
+from bs4 import BeautifulSoup
+from PIL import Image, ImageOps, ImageFilter, ImageEnhance
 from tradingview_ta import TA_Handler, Interval
+from functools import lru_cache
 import yfinance as yf
 from datetime import datetime
 import pytesseract
 from concurrent.futures import ThreadPoolExecutor
-import re
 from finvizfinance.quote import finvizfinance
 from g4f.client import Client
 
@@ -32,11 +35,12 @@ def get_screen_size():
 class TickerAnalyzer:
     def __init__(self):
         self.curr_ticker = ""
-        self.cache = {"zacks" : {}, "tv" : {}, "yf" : {}, "finviz" : {}, "chatgpt" : {}}
+        self.cache = {"zacks" : {}, "tv" : {}, "yf" : {}, "finviz" : {}, "sws" : {}, "chatgpt" : {}}
         self.zacks = self.Zacks()
         self.tv = self.Tradingview()
         self.yf = self.YahooFinance()
         self.finviz = self.Finviz()
+        self.sws = self.SimplyWallStreet()
         self.chatgpt = self.Chatgpt()
 
     def get_zacks_info(self, ticker: str):
@@ -73,7 +77,6 @@ class TickerAnalyzer:
 
             return yf_ret
 
-    
     def get_finviz_info(self, ticker: str):
         if self.cache["finviz"] and ticker in self.cache["finviz"].keys():
             return self.cache["finviz"][ticker]
@@ -85,7 +88,17 @@ class TickerAnalyzer:
 
             return finviz_ret
 
-    
+    def get_sws_info(self, ticker: str):
+        if self.cache["sws"] and ticker in self.cache["sws"].keys():
+            return self.cache["sws"][ticker]
+        else:
+            sws_ret = self.sws.get_ticker_info(ticker)
+            if len(self.cache["sws"]) == 20:
+                _, _ = self.cache["sws"].popitem(last=False)
+            self.cache["sws"].update({ticker : sws_ret})
+
+            return sws_ret
+
     def get_chatgpt_info(self, ticker: str):
         if self.cache["chatgpt"] and ticker in self.cache["chatgpt"].keys():
             return self.cache["chatgpt"][ticker]
@@ -94,7 +107,8 @@ class TickerAnalyzer:
             'zacks': self.zacks,
             'tv': self.tv,
             'yf': self.yf,
-            'finviz': self.finviz
+            'finviz': self.finviz,
+            'sws': self.sws
         }
 
         futures = {}
@@ -127,6 +141,7 @@ class TickerAnalyzer:
             self.cache["tv"][ticker],
             self.cache["yf"][ticker],
             self.cache["finviz"][ticker],
+            self.cache["sws"][ticker],
         )
 
         if len(self.cache["chatgpt"]) == 20:
@@ -179,7 +194,7 @@ class TickerAnalyzer:
             try:
                 res = requests.get(url, headers=headers, timeout=5)
                 data = res.json()
-                return False if "error" in data[ticker].keys() or data["ticker"]["reason"] == "Invalid ticker" else True
+                return False if "error" in data[ticker].keys() else True
             except Exception as e:
                 return False
         
@@ -217,8 +232,10 @@ class TickerAnalyzer:
             super().__init__()
             self.exchange  = tickers_constants.TV_STOCKS_EXCHAGE
 
+        @lru_cache(maxsize=128)
         def get_ticker_info(self, ticker: str):
             self.ticker = ticker.upper()
+            error_429 = False
             for ex, region in self.exchange.items():
                 try:
                     handler = TA_Handler(
@@ -234,14 +251,23 @@ class TickerAnalyzer:
 
                     self.summary.update({'Analysis' : analysis.summary})
 
-                except:
-                    continue
+                except Exception as e:
+                    time.sleep(1)
+                    if "429" in str(e):
+                        error_429 = True
+                        break
+                    else:
+                        continue
 
             if not self.summary:
-                self.summary = {"msg" : f"{ticker.upper()} is not a valid stock ticker. Please provide a valid stock ticker"}
+                if error_429:
+                    self.summary = {"msg" : "Too many requets to Tradingview's server. Service is temporarly blocked for your IP."}
+                else:
+                    self.summary = {"msg" : f"{ticker.upper()} is not a valid stock ticker. Please provide a valid stock ticker"}
 
             return self.summary
-            
+
+
         def _adjust_ks_string(self, ks_string_list, key_stats):
             index = 2
             indicators_list = ['TTM', 'indicated', 'FY']
@@ -515,8 +541,120 @@ class TickerAnalyzer:
                 }
 
                 self.summary.update({'Upgrades/Downgrades' : upgrades})
+
+    class SimplyWallStreet(Source):
+        @lru_cache(maxsize=128)       
+        def get_ticker_info(self, ticker: str):
+            base_url = "https://simplywall.st/en/stocks/us"
+            try:
+                for industry in tickers_constants.SWS_INDUSTRIES:
+                    for us_mkt in tickers_constants.SWS_US_MARKETS:
+                        company_name = yf.Ticker(ticker).info["shortName"].lower()
+                        adjusted_cpmpany_name = self._normalize_company_name(company_name)
+                        adjusted_cpmpany_name = adjusted_cpmpany_name.replace(',', '').replace('.', '').replace('&', '').replace(' ', '-').replace('--', '-')
+                        adjusted_cpmpany_name = adjusted_cpmpany_name[:-1] if adjusted_cpmpany_name[-1] == '-' else adjusted_cpmpany_name
+
+                        url = f"{base_url}/{industry}/{us_mkt}-{ticker.lower()}/{adjusted_cpmpany_name}"
+
+                        if not self._is_valid_simplywallstreet_url(url, random.choice(tickers_constants.USER_AGENTS_LIST)):
+                            continue
+
+                        options = {
+                            'javascript-delay': '5000',
+                            'load-error-handling': 'ignore',
+                            'no-stop-slow-scripts': '',
+                            'enable-javascript': '',
+                            'width': '1280',  # or adjust based on your needs
+                        }
+
+                        config = imgkit.config(wkhtmltoimage='/usr/bin/wkhtmltoimage')
+
+                        width, height = get_screen_size()
+
+                        scale_x = width / 1920
+                        scale_y = height / 1080
+
+                        crop_box = (344 * scale_x, 261 * scale_y, 1174 * scale_x, 1085 * scale_y)
+
+                        img_bytes = imgkit.from_url(url, False, config=config, options=options)
+
+                        cropped_img = Image.open(BytesIO(img_bytes)).crop(crop_box)
+
+                        width, height = cropped_img.size
+                        mid_height = height // 2 
+
+                        bottom_half = cropped_img.crop((0, mid_height, width, height))
+
+                        gray = bottom_half.convert("L")
+                        sharpened = gray.filter(ImageFilter.SHARPEN)
+                        contrast = ImageEnhance.Contrast(sharpened).enhance(2.0)
+                        inverted = ImageOps.invert(contrast)
+                        binarized = inverted.point(lambda x: 255 if x > 128 else 0, mode='1')
+                        binarized = binarized.resize((binarized.width * 2, binarized.height * 2))
+                        text = pytesseract.image_to_string(binarized)
+                        text_dict = self._extract_sections(text)
+
+                        top_half = cropped_img.crop((0, 0, width, mid_height))
+
+                        buffer = BytesIO()
+                        top_half.save(buffer, format="PNG")
+                        buffer.seek(0)
+
+                        self.summary.update({'Rewards' : text_dict["Rewards"]})
+                        self.summary.update({'Risk Analysis' : text_dict["Risk Analysis"]})
+                        self.summary.update({"image" : base64.b64encode(buffer.read()).decode('utf-8')})
+
+                        return self.summary
+            except:
+                pass
+                
+            if not self.summary:
+                return {"msg" : f"{ticker.upper()} is not a valid stock ticker. Please provide a valid stock ticker"}
+
+
+        def _normalize_company_name(self, name):
+            pattern = r'\b(?:' + '|'.join(tickers_constants.COMMON_SUFFIXES) + r')\b\.?,?'
+            name = re.sub(pattern, '', name, flags=re.IGNORECASE)
+            return name
         
 
+        def _is_valid_simplywallstreet_url(self, url: str, user_agent: str):
+            headers = {'User-Agent': user_agent}
+            try:
+                response = requests.get(url, headers=headers, timeout=5)
+
+                if response.status_code == 404 or "Sorry, this page was not found" in response.text:
+                    return False
+
+                return True
+            except requests.RequestException:
+                return False
+        
+        def _extract_sections(self, text):
+            lines = text.strip().splitlines()
+            data = {}
+            current_section = None
+            index = 0
+
+            for line in lines:
+                line = line.strip()
+                if not line:
+                    continue
+
+                elif line.isupper():
+                    current_section = line.title()
+                    data[current_section] = {}
+                    index = 1
+
+                elif current_section:
+                    cleaned_line = re.sub(r"^(\*|¥|@|¥e|xe|ve|e\s|[-•→©\u2022]|\s)+", "", line, flags=re.IGNORECASE)
+                    if cleaned_line and "See" not in cleaned_line:
+                        data[current_section][str(index)] = cleaned_line
+                        index += 1
+
+            return data
+
+    
     class Chatgpt:
         def _format_dict(self, name: str, data: dict) -> str:
             if not data:
@@ -527,12 +665,13 @@ class TickerAnalyzer:
                 formatted += f"- {key}: {value}\n"
             return formatted + "\n"
 
-        def _build_prompt(self, ticker: str, zacks: dict, tv: dict, yf: dict, finviz: dict) -> str:
+        def _build_prompt(self, ticker: str, zacks: dict, tv: dict, yf: dict, finviz: dict, sws: dict) -> str:
             sections = [
                 self._format_dict("Zacks", zacks),
                 self._format_dict("TradingView", tv),
                 self._format_dict("Yahoo Finance", yf),
-                self._format_dict("Finviz", finviz)
+                self._format_dict("Finviz", finviz),
+                self._format_dict("SimplyWallStreet", sws)
             ]
 
             return f"""You are a professional financial analyst. Analyze the stock {ticker.upper()}
@@ -559,8 +698,8 @@ class TickerAnalyzer:
             )
             return response.choices[0].message.content
 
-        def get_ticker_info(self, ticker: str, zacks: dict, tv: dict, yf: dict, finviz: dict):
-            prompt = self._build_prompt(ticker, zacks, tv, yf, finviz)
+        def get_ticker_info(self, ticker: str, zacks: dict, tv: dict, yf: dict, finviz: dict, sws: dict):
+            prompt = self._build_prompt(ticker, zacks, tv, yf, finviz, sws)
             return self._send_prompt(ticker, prompt)
         
 

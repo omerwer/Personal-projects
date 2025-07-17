@@ -80,6 +80,20 @@ def finviz(ticker: str):
     summary = ta.get_finviz_info(ticker)
     return JSONResponse({"summary": sanitize_for_json(summary)})
 
+@app.get("/SimplyWallStreet/{ticker}")
+def finviz(ticker: str):
+    summary = ta.get_sws_info(ticker)
+    image_base64 = summary.pop('image', None)
+
+    image_data = None
+    if image_base64:
+        image_data = f"data:image/png;base64,{image_base64}"
+
+    return JSONResponse({
+        "summary": sanitize_for_json(summary),
+        "image": image_data
+    })
+
 
 app.add_middleware(
     CORSMiddleware,
