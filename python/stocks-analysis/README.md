@@ -120,7 +120,7 @@ brew install Caskroom/cask/wkhtmltopdf
 ```
 * #### Windows:
 Download from [wkhtmltopdf.org](https://wkhtmltopdf.org/downloads.html)
-⚠️ Make sure wkhtmltoimage is available in your system's PATH.
+⚠️ Make sure wkhtmltoimage is available in your system's PATH (hardcoded to default `/usr/bin/wkhtmltoimage`).
 
 
 ### 4. Install dependencies
