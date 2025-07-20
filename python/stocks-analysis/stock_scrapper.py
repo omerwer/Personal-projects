@@ -30,16 +30,45 @@ def get_screen_size():
     except Exception as e:
         return (1920, 1080)
 
+def get_and_crop_screenshot(url, x, y, w, h):
+    options = {
+        'javascript-delay': '5000',  # wait 5 seconds for JS
+        'no-stop-slow-scripts': '',
+        'enable-javascript': '',
+        'width': '1280',  # or adjust based on your needs
+    }
+
+    width, height = get_screen_size()
+
+    config = imgkit.config(wkhtmltoimage='/usr/bin/wkhtmltoimage') # First install - sudo apt-get install wkhtmltopdf
+
+    img_bytes = imgkit.from_url(url, False, config=config, options=options)
+
+    # screen resolution is based on a 1920x1080 size, so we need to adjust for the current screen resolution
+    scale_x = width / 1920
+    scale_y = height / 1080
+    crop_box = (x * scale_x, y * scale_y, w * scale_x, h * scale_y)
+
+    return Image.open(BytesIO(img_bytes)).crop(crop_box)
+
+
+def get_display_image(cropped_img: Image):
+    buffer = BytesIO()
+    cropped_img.save(buffer, format="PNG")
+    buffer.seek(0)
+    return base64.b64encode(buffer.read()).decode('utf-8')
+
 
 class TickerAnalyzer:
     def __init__(self):
         self.curr_ticker = ""
-        self.cache = {"zacks" : {}, "tv" : {}, "yf" : {}, "finviz" : {}, "sws" : {}, "chatgpt" : {}}
+        self.cache = {"zacks" : {}, "tv" : {}, "yf" : {}, "finviz" : {}, "sws" : {}, "sa" : {}, "chatgpt" : {}}
         self.zacks = self.Zacks()
         self.tv = self.Tradingview()
         self.yf = self.YahooFinance()
         self.finviz = self.Finviz()
         self.sws = self.SimplyWallStreet()
+        self.sa = self.StocksAnalysis()
         self.chatgpt = self.Chatgpt()
 
     def get_zacks_info(self, ticker: str):
@@ -97,6 +126,18 @@ class TickerAnalyzer:
             self.cache["sws"].update({ticker : sws_ret})
 
             return sws_ret
+        
+    def get_sa_info(self, ticker: str):
+        if self.cache["sa"] and ticker in self.cache["sa"].keys():
+            return self.cache["sa"][ticker]
+        else:
+            sa_ret = self.sa.get_ticker_info(ticker)
+            if len(self.cache["sa"]) == 20:
+                _, _ = self.cache["sa"].popitem(last=False)
+            self.cache["sa"].update({ticker : sa_ret})
+
+            return sa_ret
+        
 
     def get_chatgpt_info(self, ticker: str):
         if self.cache["chatgpt"] and ticker in self.cache["chatgpt"].keys():
@@ -107,7 +148,8 @@ class TickerAnalyzer:
             'tv': self.tv,
             'yf': self.yf,
             'finviz': self.finviz,
-            'sws': self.sws
+            'sws': self.sws,
+            'sa': self.sa
         }
 
         futures = {}
@@ -141,6 +183,7 @@ class TickerAnalyzer:
             self.cache["yf"][ticker],
             self.cache["finviz"][ticker],
             self.cache["sws"][ticker],
+            self.cache["sa"][ticker]
         )
 
         if len(self.cache["chatgpt"]) == 20:
@@ -200,30 +243,9 @@ class TickerAnalyzer:
         def _get_zacks_styles_score_image(self, ticker: str):
             url = f'https://www.zacks.com/stock/quote/{ticker}?q={ticker}'
 
-            options = {
-                'javascript-delay': '5000',  # wait 3 seconds for JS
-                'no-stop-slow-scripts': '',
-                'enable-javascript': '',
-                'width': '1280',  # or adjust based on your needs
-            }
+            cropped_img = get_and_crop_screenshot(url, 330, 180, 1145, 480)
 
-            width, height = get_screen_size()
-
-            config = imgkit.config(wkhtmltoimage='/usr/bin/wkhtmltoimage') # First install - sudo apt-get install wkhtmltopdf
-
-            img_bytes = imgkit.from_url(url, False, config=config, options=options)
-
-            # screen resolution is based on a 1920x1080 size, so we need to adjust for the current screen resolution
-            scale_x = width / 1920
-            scale_y = height / 1080
-            crop_box = (330 * scale_x, 180 * scale_y, 1145 * scale_x, 480 * scale_y)
-
-            cropped_img = Image.open(BytesIO(img_bytes)).crop(crop_box)
-
-            buffer = BytesIO()
-            cropped_img.save(buffer, format="PNG")
-            buffer.seek(0)
-            return base64.b64encode(buffer.read()).decode('utf-8')
+            return get_display_image(cropped_img)
 
 
     class Tradingview(Source):
@@ -601,26 +623,7 @@ class TickerAnalyzer:
                         if not self._is_valid_simplywallstreet_url(url, random.choice(tickers_constants.USER_AGENTS_LIST)):
                             continue
 
-                        options = {
-                            'javascript-delay': '5000',
-                            'load-error-handling': 'ignore',
-                            'no-stop-slow-scripts': '',
-                            'enable-javascript': '',
-                            'width': '1280',  # or adjust based on your needs
-                        }
-
-                        config = imgkit.config(wkhtmltoimage='/usr/bin/wkhtmltoimage')
-
-                        width, height = get_screen_size()
-
-                        scale_x = width / 1920
-                        scale_y = height / 1080
-
-                        crop_box = (344 * scale_x, 261 * scale_y, 1174 * scale_x, 1085 * scale_y)
-
-                        img_bytes = imgkit.from_url(url, False, config=config, options=options)
-
-                        cropped_img = Image.open(BytesIO(img_bytes)).crop(crop_box)
+                        cropped_img = get_and_crop_screenshot(url, 344, 261, 1174, 1085)
 
                         width, height = cropped_img.size
                         mid_height = height // 2 
@@ -638,13 +641,9 @@ class TickerAnalyzer:
 
                         top_half = cropped_img.crop((0, 0, width, mid_height))
 
-                        buffer = BytesIO()
-                        top_half.save(buffer, format="PNG")
-                        buffer.seek(0)
-
                         self.summary.update({'Rewards' : text_dict["Rewards"]})
                         self.summary.update({'Risk Analysis' : text_dict["Risk Analysis"]})
-                        self.summary.update({"image" : base64.b64encode(buffer.read()).decode('utf-8')})
+                        self.summary.update({"image" : get_display_image(top_half)})
 
                         return self.summary
             except:
@@ -696,7 +695,29 @@ class TickerAnalyzer:
 
             return data
 
-    
+
+    class StocksAnalysis(Source):
+        def get_ticker_info(self, ticker: str):
+            try:
+                url = f'https://stockanalysis.com/stocks/{ticker.lower()}/forecast/'
+
+                cropped_img = get_and_crop_screenshot(url, 23, 1173, 1191, 1650)
+
+                text = pytesseract.image_to_string(cropped_img)
+
+                lines = text.splitlines()
+                price_target = next((line for line in lines if line.strip().startswith("Price Target:")), None)
+                analysts_consensus = next((line for line in lines if line.strip().startswith("Analyst Consensus:")), None)
+
+                self.summary.update({"Price target" : price_target.split(": ", 1)[1]})
+                self.summary.update({"Analyst consensus" : analysts_consensus.split(": ", 1)[1]})
+                self.summary.update({"image" : get_display_image(cropped_img)})
+            except:
+                self.summary = {"msg" : f"{ticker.upper()} is not a valid stock ticker. Please provide a valid stock ticker"}
+
+            return self.summary
+                
+
     class Chatgpt:
         def _format_dict(self, name: str, data: dict) -> str:
             if not data:
@@ -707,13 +728,14 @@ class TickerAnalyzer:
                 formatted += f"- {key}: {value}\n"
             return formatted + "\n"
 
-        def _build_prompt(self, ticker: str, zacks: dict, tv: dict, yf: dict, finviz: dict, sws: dict) -> str:
+        def _build_prompt(self, ticker: str, zacks: dict, tv: dict, yf: dict, finviz: dict, sws: dict, sa: dict) -> str:
             sections = [
                 self._format_dict("Zacks", zacks),
                 self._format_dict("TradingView", tv),
                 self._format_dict("Yahoo Finance", yf),
                 self._format_dict("Finviz", finviz),
-                self._format_dict("SimplyWallStreet", sws)
+                self._format_dict("SimplyWallStreet", sws),
+                self._format_dict("StocksAnalysis", sa)
             ]
 
             return f"""You are a professional financial analyst. Analyze the stock {ticker.upper()}
@@ -740,8 +762,8 @@ class TickerAnalyzer:
             )
             return response.choices[0].message.content
 
-        def get_ticker_info(self, ticker: str, zacks: dict, tv: dict, yf: dict, finviz: dict, sws: dict):
-            prompt = self._build_prompt(ticker, zacks, tv, yf, finviz, sws)
+        def get_ticker_info(self, ticker: str, zacks: dict, tv: dict, yf: dict, finviz: dict, sws: dict, sa: dict):
+            prompt = self._build_prompt(ticker, zacks, tv, yf, finviz, sws, sa)
             return self._send_prompt(ticker, prompt)
         
 
