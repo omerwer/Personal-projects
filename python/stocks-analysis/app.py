@@ -97,8 +97,8 @@ def simplywallstreet(ticker: str):
     })
 
 
-@app.get("/StocksAnalysis/{ticker}")
-def stocksanalysis(ticker: str):
+@app.get("/StockAnalysis/{ticker}")
+def stockanalysis(ticker: str):
     summary = ta.get_sa_info(ticker)
 
     image_base64 = summary.pop("image", None)

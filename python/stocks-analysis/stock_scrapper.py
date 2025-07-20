@@ -68,7 +68,7 @@ class TickerAnalyzer:
         self.yf = self.YahooFinance()
         self.finviz = self.Finviz()
         self.sws = self.SimplyWallStreet()
-        self.sa = self.StocksAnalysis()
+        self.sa = self.StockAnalysis()
         self.chatgpt = self.Chatgpt()
 
     def get_zacks_info(self, ticker: str):
@@ -696,7 +696,7 @@ class TickerAnalyzer:
             return data
 
 
-    class StocksAnalysis(Source):
+    class StockAnalysis(Source):
         def get_ticker_info(self, ticker: str):
             try:
                 url = f'https://stockanalysis.com/stocks/{ticker.lower()}/forecast/'
@@ -735,7 +735,7 @@ class TickerAnalyzer:
                 self._format_dict("Yahoo Finance", yf),
                 self._format_dict("Finviz", finviz),
                 self._format_dict("SimplyWallStreet", sws),
-                self._format_dict("StocksAnalysis", sa)
+                self._format_dict("StockAnalysis", sa)
             ]
 
             return f"""You are a professional financial analyst. Analyze the stock {ticker.upper()}
