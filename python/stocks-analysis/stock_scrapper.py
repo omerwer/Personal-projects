@@ -8,12 +8,11 @@ import random
 import time
 from io import BytesIO
 import base64
-from bs4 import BeautifulSoup
 from PIL import Image, ImageOps, ImageFilter, ImageEnhance
 from tradingview_ta import TA_Handler, Interval
 from functools import lru_cache
 import yfinance as yf
-from datetime import datetime
+from datetime import datetime, timedelta
 import pytesseract
 from concurrent.futures import ThreadPoolExecutor
 from finvizfinance.quote import finvizfinance
@@ -266,7 +265,7 @@ class TickerAnalyzer:
                     self.summary = {"msg" : f"{ticker.upper()} is not a valid stock ticker. Please provide a valid stock ticker"}
 
             return self.summary
-
+        
 
         def _adjust_ks_string(self, ks_string_list, key_stats):
             index = 2
@@ -433,12 +432,14 @@ class TickerAnalyzer:
 
                 self.summary.update({"Upgrades & downgrades" : upgrades})
 
+
         def _recommendations(self, attr_value):
             self.summary.update({'recommendations' : {}})
             recommendations_dict = attr_value.to_dict(orient='index')
             for (key, value) in recommendations_dict.items():
                 _ = value.pop('period')
                 self.summary['recommendations'].update({f'{key}-Month' : value})
+
 
         def _analyst_price_targets(self, attr_value, ticker_uppercase):
             conclusion = None
@@ -453,15 +454,55 @@ class TickerAnalyzer:
 
             self.summary.update({'Price target' : reccomendation_and_conclusion})
         
+
         def _not_news_attr_handeling(self, attr, attr_value, ticker_uppercase):
             if attr == 'analyst_price_targets':
                 self._analyst_price_targets(attr_value, ticker_uppercase)
 
-            elif attr == 'recommendations_summary':
+            self._get_otm_calls()
+
+            if attr == 'recommendations_summary':
                 self._recommendations(attr_value)
 
             elif attr == 'upgrades_downgrades':
                 self._upgrades_downgrades(attr_value)
+
+
+        def _get_otm_calls(self, otm_threshold: float=1.15):
+            current_price = float(self.ticker.info.get("regularMarketPrice", 0))
+
+            if current_price is None:
+                raise ValueError("Couldn't fetch current price.")
+
+            expirations = self.ticker.options
+            cutoff = datetime.today() + timedelta(days=60)
+            valid_expirations = [d for d in expirations if datetime.strptime(d, "%Y-%m-%d") <= cutoff]
+
+            results = []
+
+            index = 0
+
+            for exp in valid_expirations:
+                try:
+                    calls = self.ticker.option_chain(exp).calls
+                    for i in range(len(calls["strike"])):
+                        strike = float(calls["strike"][i])
+                        if strike > current_price * otm_threshold:
+                            index += 1
+                            option = { str(index) :
+                                {"strike": str(strike),
+                                "expiration": exp,
+                                "volume": str(calls["volume"][i]),
+                                "openInterest": str(calls["openInterest"][i]),
+                                "lastPrice": str(calls["lastPrice"][i])}
+                            }
+
+                            results.append(option)
+                except Exception as e:
+                    print(f"Error retrieving options for {exp}: {e}")
+                    continue
+
+            self.summary.update({"Options flow (Deep OTM)" : results})
 
 
     class Finviz(Source):       
@@ -502,6 +543,7 @@ class TickerAnalyzer:
                 self.summary = {"msg" : f"{ticker.upper()} is not a valid stock ticker. Please provide a valid stock ticker"}
 
             return self.summary
+
         
         def _news(self, curr_date, data):
             news_dict = data['news'].to_dict(orient='index')
