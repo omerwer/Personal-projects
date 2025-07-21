@@ -41,7 +41,7 @@ Always conduct your own research and consult a licensed financial advisor before
   - Finviz
   - Simply Wall Street
   - Stock Analysis
-- 🧠 Generate stock-specific insights from the above sources using a custom **ChatGPT prompt**
+- 🧠 Generate stock-specific insights from the above sources using a fixed ChatGPT prompt
 - 🌐 Clean and responsive UI with Tailwind CSS
 - 📈 Automatically renders JSON responses into human-readable HTML
 - 🔗 Hyperlink and Markdown support for rich text formatting
