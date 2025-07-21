@@ -49,7 +49,9 @@ def get_and_crop_screenshot(url, x, y, w, h):
     scale_y = height / 1080
     crop_box = (x * scale_x, y * scale_y, w * scale_x, h * scale_y)
 
-    return Image.open(BytesIO(img_bytes)).crop(crop_box)
+    full_screenshot = Image.open(BytesIO(img_bytes))
+
+    return full_screenshot, full_screenshot.crop(crop_box)
 
 
 def get_display_image(cropped_img: Image):
@@ -243,7 +245,7 @@ class TickerAnalyzer:
         def _get_zacks_styles_score_image(self, ticker: str):
             url = f'https://www.zacks.com/stock/quote/{ticker}?q={ticker}'
 
-            cropped_img = get_and_crop_screenshot(url, 330, 180, 1145, 480)
+            _, cropped_img = get_and_crop_screenshot(url, 330, 180, 1145, 480)
 
             return get_display_image(cropped_img)
 
@@ -623,7 +625,7 @@ class TickerAnalyzer:
                         if not self._is_valid_simplywallstreet_url(url, random.choice(tickers_constants.USER_AGENTS_LIST)):
                             continue
 
-                        cropped_img = get_and_crop_screenshot(url, 344, 261, 1174, 1085)
+                        _, cropped_img = get_and_crop_screenshot(url, 344, 261, 1174, 1085)
 
                         width, height = cropped_img.size
                         mid_height = height // 2 
@@ -701,18 +703,24 @@ class TickerAnalyzer:
             try:
                 url = f'https://stockanalysis.com/stocks/{ticker.lower()}/forecast/'
 
-                cropped_img = get_and_crop_screenshot(url, 23, 1173, 1191, 1650)
+                full_screenshot, cropped_img = get_and_crop_screenshot(url, 23, 1173, 1191, 1690)
 
                 text = pytesseract.image_to_string(cropped_img)
+                
+                if text:
+                    lines = text.splitlines()
+                    price_target = next((line for line in lines if line.strip().startswith("Price Target:")), None)
+                    analysts_consensus = next((line for line in lines if line.strip().startswith("Analyst Consensus:")), None)
 
-                lines = text.splitlines()
-                price_target = next((line for line in lines if line.strip().startswith("Price Target:")), None)
-                analysts_consensus = next((line for line in lines if line.strip().startswith("Analyst Consensus:")), None)
-
-                self.summary.update({"Price target" : price_target.split(": ", 1)[1]})
-                self.summary.update({"Analyst consensus" : analysts_consensus.split(": ", 1)[1]})
-                self.summary.update({"image" : get_display_image(cropped_img)})
-            except:
+                    if price_target:
+                        self.summary.update({"Price target" : price_target.split(": ", 1)[1]})
+                    if analysts_consensus:
+                        self.summary.update({"Analyst consensus" : analysts_consensus.split(": ", 1)[1]})
+                    self.summary.update({"image" : get_display_image(full_screenshot.crop((23, 1173, 1191, 2650)))})
+                else:
+                    self.summary = {"msg" : f"{ticker.upper()} retrieval failed."}
+            except Exception as e:
+                print(e)
                 self.summary = {"msg" : f"{ticker.upper()} is not a valid stock ticker. Please provide a valid stock ticker"}
 
             return self.summary
