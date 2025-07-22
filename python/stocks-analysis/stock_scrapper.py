@@ -30,17 +30,17 @@ def get_screen_size():
     except Exception as e:
         return (1920, 1080)
 
-def get_and_crop_screenshot(url, x, y, w, h):
+def get_and_crop_screenshot(url, x, y, w, h, timeout=5000):
     options = {
-        'javascript-delay': '5000',  # wait 5 seconds for JS
-        'no-stop-slow-scripts': '',
-        'enable-javascript': '',
-        'width': '1280',  # or adjust based on your needs
+        "javascript-delay": str(timeout),  # wait 5 seconds for JS
+        "no-stop-slow-scripts": "",
+        "enable-javascript": "",
+        "width": "1280",  # or adjust based on your needs
     }
 
     width, height = get_screen_size()
 
-    config = imgkit.config(wkhtmltoimage='/usr/bin/wkhtmltoimage') # First install - sudo apt-get install wkhtmltopdf
+    config = imgkit.config(wkhtmltoimage="/usr/bin/wkhtmltoimage") # First install - sudo apt-get install wkhtmltopdf
 
     img_bytes = imgkit.from_url(url, False, config=config, options=options)
 
@@ -58,7 +58,7 @@ def get_display_image(cropped_img: Image):
     buffer = BytesIO()
     cropped_img.save(buffer, format="PNG")
     buffer.seek(0)
-    return base64.b64encode(buffer.read()).decode('utf-8')
+    return base64.b64encode(buffer.read()).decode("utf-8")
 
 
 class TickerAnalyzer:
@@ -146,12 +146,12 @@ class TickerAnalyzer:
             return self.cache["chatgpt"][ticker]
         
         source_methods = {
-            'zacks': self.zacks,
-            'tv': self.tv,
-            'yf': self.yf,
-            'finviz': self.finviz,
-            'sws': self.sws,
-            'sa': self.sa
+            "zacks": self.zacks,
+            "tv": self.tv,
+            "yf": self.yf,
+            "finviz": self.finviz,
+            "sws": self.sws,
+            "sa": self.sa
         }
 
         futures = {}
@@ -216,14 +216,14 @@ class TickerAnalyzer:
 
                     response = requests.get(url=url)
                     data = dict(response.json())[self.ticker]
-                    data_dict.update({'name' : data['name']})
-                    data_dict.update({'ticker' : data['ticker']})
-                    data_dict.update({'zacks rank' : f"{data['zacks_rank']} ({data['zacks_rank_text']})"})
-                    data_dict.update({"Forward P/E" : data['source']['sungard']["pe_ratio"]})
+                    data_dict.update({"name" : data["name"]})
+                    data_dict.update({"ticker" : data["ticker"]})
+                    data_dict.update({"zacks rank" : f"{data['zacks_rank']} ({data['zacks_rank_text']})"})
+                    data_dict.update({"Forward P/E" : data["source"]["sungard"]["pe_ratio"]})
 
-                    data_dict.update({"dividend_freq" : data['source']['sungard']["dividend_freq"]})
-                    data_dict.update({'dividend_yield' : data['dividend_yield']+'%'})
-                    data_dict.update({"dividend" : data['source']['sungard']["dividend"]})
+                    data_dict.update({"dividend_freq" : data["source"]["sungard"]["dividend_freq"]})
+                    data_dict.update({"dividend_yield" : data["dividend_yield"]+"%"})
+                    data_dict.update({"dividend" : data["source"]["sungard"]["dividend"]})
                     data_dict.update({"image" : image})
 
                     self.summary = data_dict
@@ -243,7 +243,7 @@ class TickerAnalyzer:
                 return False
         
         def _get_zacks_styles_score_image(self, ticker: str):
-            url = f'https://www.zacks.com/stock/quote/{ticker}?q={ticker}'
+            url = f"https://www.zacks.com/stock/quote/{ticker}?q={ticker}"
 
             _, cropped_img = get_and_crop_screenshot(url, 330, 180, 1145, 480)
 
@@ -272,7 +272,7 @@ class TickerAnalyzer:
 
                     self._get_tv_stats_from_image(self.ticker, ex, analysis)
 
-                    self.summary.update({'Analysis' : analysis.summary})
+                    self.summary.update({"Analysis" : analysis.summary})
 
                 except Exception as e:
                     time.sleep(1)
@@ -293,20 +293,20 @@ class TickerAnalyzer:
 
         def _adjust_ks_string(self, ks_string_list, key_stats):
             index = 2
-            indicators_list = ['TTM', 'indicated', 'FY']
+            indicators_list = ["TTM", "indicated", "FY"]
             while (index < len(ks_string_list) - 1):
-                if ks_string_list[index] == '':
+                if ks_string_list[index] == "":
                     index = index + 1
                 else:
                     if index == len(ks_string_list) - 1:
-                        key_stats[ks_string_list[index]] = ''
+                        key_stats[ks_string_list[index]] = ""
                         index = index + 1
                     else:
                         if any(word in ks_string_list[index] for word in indicators_list) and \
                         any(word in ks_string_list[index+1] for word in indicators_list):
-                            key_stats[ks_string_list[index]] = ''
+                            key_stats[ks_string_list[index]] = ""
                             index = index + 1
-                        elif ks_string_list[index+1] == '' and \
+                        elif ks_string_list[index+1] == "" and \
                         any(char.isdigit() for char in ks_string_list[index+2]):
                             key_stats[ks_string_list[index]] = ks_string_list[index+2]
                             index = index + 3
@@ -320,16 +320,16 @@ class TickerAnalyzer:
 
                 cropped_img = Image.open(BytesIO(img_bytes)).crop(crop_box)
 
-                if str == 'forecast':
+                if str == "forecast":
                     text = pytesseract.image_to_string(cropped_img)
                     match = re.search(r"\d+\.\d+", text)
                     if match:
                         price_target = float(match.group())
-                        last_price = float(analysis.indicators['close'])
-                        shared['Last closing price'] = last_price
-                        shared['Price target'] = price_target
+                        last_price = float(analysis.indicators["close"])
+                        shared["Last closing price"] = last_price
+                        shared["Price target"] = price_target
                         potential =  round((((price_target - last_price) / last_price) * 100), 2)
-                        shared['Potential %'] = f'{potential}%'
+                        shared["Potential %"] = f"{potential}%"
 
                 else:
                     text = pytesseract.image_to_string(cropped_img)
@@ -338,32 +338,32 @@ class TickerAnalyzer:
                     match = re.search(pattern, text, re.DOTALL)
                     if match:
                         key_stats_raw = match.group(1)
-                        key_stats_words = key_stats_raw.split('\n')
+                        key_stats_words = key_stats_raw.split("\n")
                         for i, word in enumerate(key_stats_words):
-                            key_stats_words[i] = word.replace(' >', '').replace('uso', '').replace(' M', 'M').replace(' B', 'B')
+                            key_stats_words[i] = word.replace(" >", "").replace("uso", "").replace(" M", "M").replace(" B", "B")
                         key_stats = {}
 
                         self._adjust_ks_string(key_stats_words, key_stats)
 
-                        shared['Key stats'] = key_stats
+                        shared["Key stats"] = key_stats
 
             except Exception as e:
                 print(f"{e}please try again if any data is missing...")
 
         
         def _get_tv_stats_from_image(self, ticker: str, exchange: str, analysis: dict):
-            url = f'https://www.tradingview.com/symbols/{exchange}-{ticker}/'
-            forecast_url = url + 'forecast/'
+            url = f"https://www.tradingview.com/symbols/{exchange}-{ticker}/"
+            forecast_url = url + "forecast/"
 
             options = {
-                'javascript-delay': '5000',
-                'load-error-handling': 'ignore',
-                'no-stop-slow-scripts': '',
-                'enable-javascript': '',
-                'width': '1280',  # or adjust based on your needs
+                "javascript-delay": "5000",
+                "load-error-handling": "ignore",
+                "no-stop-slow-scripts": "",
+                "enable-javascript": "",
+                "width": "1280",  # or adjust based on your needs
             }
 
-            config = imgkit.config(wkhtmltoimage='/usr/bin/wkhtmltoimage')
+            config = imgkit.config(wkhtmltoimage="/usr/bin/wkhtmltoimage")
 
             stats_and_price_target = {}
 
@@ -377,13 +377,13 @@ class TickerAnalyzer:
                     self._render_imgkit,
                     url, config, options,
                     (15 * scale_x, 1375 * scale_y, 315 * scale_x, 2600 * scale_y),
-                    'ks', stats_and_price_target
+                    "ks", stats_and_price_target
                 )
                 future_forecast = executor.submit(
                     self._render_imgkit,
                     forecast_url, config, options,
                     (19 * scale_x, 654 * scale_y, 199 * scale_x, 732 * scale_y),
-                    'forecast', stats_and_price_target, analysis
+                    "forecast", stats_and_price_target, analysis
                 )
 
             future_ks.result()
@@ -395,26 +395,26 @@ class TickerAnalyzer:
     class YahooFinance(Source):
         def __init__(self):
             super().__init__()
-            self.attributes = ['analyst_price_targets', 'news', 'recommendations_summary', 'upgrades_downgrades']
+            self.attributes = ["analyst_price_targets", "news", "recommendations_summary", "upgrades_downgrades"]
 
         def get_ticker_info(self, ticker: str):
             try:
                 ticker_uppercase = ticker.upper()
                 self.ticker = yf.Ticker(ticker_uppercase)
                 for attr in dir(self.ticker):
-                    if attr in self.attributes and not attr == 'news':
+                    if attr in self.attributes and not attr == "news":
                         attr_value = getattr(self.ticker, attr)
                         self._not_news_attr_handeling(attr, attr_value, ticker_uppercase)
                         
-                    elif attr == 'news':
+                    elif attr == "news":
                         self._news_attr_handeling(attr)
         
             except Exception as e:
                 print(f"Error msg: {e}.")
                 
                 
-            if not self.summary['News'] and not self.summary['recommendations'] and not self.summary['Upgrades & downgrades']:
-                price, _ = self.summary['Price target']
+            if not self.summary["News"] and not self.summary["recommendations"] and not self.summary["Upgrades & downgrades"]:
+                price, _ = self.summary["Price target"]
                 if not price:
                     self.summary = {"msg" : f"{ticker.upper()} is not a valid stock ticker. Please provide a valid stock ticker"}
             
@@ -423,28 +423,28 @@ class TickerAnalyzer:
         def _news_attr_handeling(self, attr):
             recent_news_dict = {}
             for news in getattr(self.ticker, attr):
-                content = news['content']
+                content = news["content"]
                 curr_date = datetime.now()
-                year, month, _ = content['pubDate'].split('-')
+                year, month, _ = content["pubDate"].split("-")
                 if (int(year) == curr_date.year or (int(year) == curr_date.year - 1 and abs(curr_date.month -  int(month)) > 6)):
-                    for key in ['id', 'description', 'displayTime', 'isHosted', 
-                                'bypassModal', 'previewUrl', 'thumbnail', 'provider', 
-                                'clickThroughUrl', 'metadata', 'finance', 'storyline']:
+                    for key in ["id", "description", "displayTime", "isHosted", 
+                                "bypassModal", "previewUrl", "thumbnail", "provider", 
+                                "clickThroughUrl", "metadata", "finance", "storyline"]:
                         _ = content.pop(key)
 
-                    content_type = content.pop('contentType')
-                    raw_url_data = content.pop('canonicalUrl')
-                    content['url'] = raw_url_data['url']
+                    content_type = content.pop("contentType")
+                    raw_url_data = content.pop("canonicalUrl")
+                    content["url"] = raw_url_data["url"]
                     recent_news_dict.update({content_type : content})
 
 
             news = {
                 str(k): v for k, v in recent_news_dict.items()
             }
-            self.summary.update({'News' : news})
+            self.summary.update({"News" : news})
         
         def _upgrades_downgrades(self, attr_value):
-                upgrades_dict = attr_value.to_dict(orient='index')
+                upgrades_dict = attr_value.to_dict(orient="index")
                 recent_upgrades_dict = {}
                 for date, values in upgrades_dict.items():
                     if date.year >= datetime.now().year - 1:
@@ -458,37 +458,37 @@ class TickerAnalyzer:
 
 
         def _recommendations(self, attr_value):
-            self.summary.update({'recommendations' : {}})
-            recommendations_dict = attr_value.to_dict(orient='index')
+            self.summary.update({"recommendations" : {}})
+            recommendations_dict = attr_value.to_dict(orient="index")
             for (key, value) in recommendations_dict.items():
-                _ = value.pop('period')
-                self.summary['recommendations'].update({f'{key}-Month' : value})
+                _ = value.pop("period")
+                self.summary["recommendations"].update({f"{key}-Month" : value})
 
 
         def _analyst_price_targets(self, attr_value, ticker_uppercase):
             conclusion = None
-            if 'low' in attr_value and attr_value['current'] < attr_value['low']:
-                conclusion = f'{ticker_uppercase} trades lower than low target! seems undervalued.'
-            elif 'high' in attr_value and attr_value['current'] >= attr_value['high']:
-                conclusion = f'{ticker_uppercase} trades higher than high target! seems overvalued.'
+            if "low" in attr_value and attr_value["current"] < attr_value["low"]:
+                conclusion = f"{ticker_uppercase} trades lower than low target! seems undervalued."
+            elif "high" in attr_value and attr_value["current"] >= attr_value["high"]:
+                conclusion = f"{ticker_uppercase} trades higher than high target! seems overvalued."
             else:
-                conclusion = f'{ticker_uppercase} trades within range.'
+                conclusion = f"{ticker_uppercase} trades within range."
             
             reccomendation_and_conclusion = (attr_value, conclusion)
 
-            self.summary.update({'Price target' : reccomendation_and_conclusion})
+            self.summary.update({"Price target" : reccomendation_and_conclusion})
         
 
         def _not_news_attr_handeling(self, attr, attr_value, ticker_uppercase):
-            if attr == 'analyst_price_targets':
+            if attr == "analyst_price_targets":
                 self._analyst_price_targets(attr_value, ticker_uppercase)
 
             self._get_otm_calls()
 
-            if attr == 'recommendations_summary':
+            if attr == "recommendations_summary":
                 self._recommendations(attr_value)
 
-            elif attr == 'upgrades_downgrades':
+            elif attr == "upgrades_downgrades":
                 self._upgrades_downgrades(attr_value)
 
 
@@ -538,11 +538,11 @@ class TickerAnalyzer:
                 
                 for attr in tickers_constants.FINVIZ_ATTR_LIST:
                     try:
-                        _ = data['fundament'].pop(attr)
+                        _ = data["fundament"].pop(attr)
                     except:
                         continue
 
-                self.summary.update({'General info' : data['fundament']})
+                self.summary.update({"General info" : data["fundament"]})
 
                 curr_date = datetime.now()
 
@@ -551,16 +551,16 @@ class TickerAnalyzer:
 
                 insiders_dict = {}
 
-                for key, insider in stock.ticker_inside_trader().to_dict(orient='index').items():
-                    if str(curr_date.year)[-2:] in insider['Date'] or str(int(curr_date.year)-1)[-2:] in insider['Date']:
-                        insider_name = insider.pop('Insider Trading')
+                for key, insider in stock.ticker_inside_trader().to_dict(orient="index").items():
+                    if str(curr_date.year)[-2:] in insider["Date"] or str(int(curr_date.year)-1)[-2:] in insider["Date"]:
+                        insider_name = insider.pop("Insider Trading")
                         insiders_dict.update({insider_name : insider})
 
                 insiders = {
                     str(k): v for k, v in insiders_dict.items()
                 }
 
-                self.summary.update({'Insiders trading' : insiders})
+                self.summary.update({"Insiders trading" : insiders})
             
             except Exception as e:
                 print(f"Error msg: {e}")
@@ -570,11 +570,11 @@ class TickerAnalyzer:
 
         
         def _news(self, curr_date, data):
-            news_dict = data['news'].to_dict(orient='index')
+            news_dict = data["news"].to_dict(orient="index")
             recent_news_dict = {}
             
             for key, news in news_dict.items():
-                date = news.pop('Date')
+                date = news.pop("Date")
                 news_year = date.year
                 news_month = date.month
                 news_day = date.day
@@ -588,16 +588,16 @@ class TickerAnalyzer:
                 str(k): v for k, v in recent_news_dict.items()
             }
 
-            self.summary.update({'News' : news})
+            self.summary.update({"News" : news})
         
         def _upgrades_downgrades(self, curr_date, data):
-            if 'ratings_outer' not in data:
-                self.summary.update({'Upgrades/Downgrades' : {}})
+            if "ratings_outer" not in data:
+                self.summary.update({"Upgrades/Downgrades" : {}})
             else:
-                upgrades_dict = data['ratings_outer'].to_dict(orient='index')
+                upgrades_dict = data["ratings_outer"].to_dict(orient="index")
                 recent_upgrades_dict = {}
                 for key, values in upgrades_dict.items():
-                    date = values.pop('Date')
+                    date = values.pop("Date")
                     updgrade_downgrade_year = int(date.year)
                     if updgrade_downgrade_year >= curr_date.year - 1:
                         recent_upgrades_dict.update({date : values})
@@ -606,7 +606,7 @@ class TickerAnalyzer:
                     str(k): v for k, v in recent_upgrades_dict.items()
                 }
 
-                self.summary.update({'Upgrades/Downgrades' : upgrades})
+                self.summary.update({"Upgrades/Downgrades" : upgrades})
 
     class SimplyWallStreet(Source):
         @lru_cache(maxsize=128)       
@@ -617,15 +617,15 @@ class TickerAnalyzer:
                     for us_mkt in tickers_constants.SWS_US_MARKETS:
                         company_name = yf.Ticker(ticker).info["shortName"].lower()
                         adjusted_cpmpany_name = self._normalize_company_name(company_name)
-                        adjusted_cpmpany_name = adjusted_cpmpany_name.replace(',', '').replace('.', '').replace('&', '').replace(' ', '-').replace('--', '-')
-                        adjusted_cpmpany_name = adjusted_cpmpany_name[:-1] if adjusted_cpmpany_name[-1] == '-' else adjusted_cpmpany_name
+                        adjusted_cpmpany_name = adjusted_cpmpany_name.replace(",", "").replace(".", "").replace("&", "").replace(" ", "-").replace("--", "-")
+                        adjusted_cpmpany_name = adjusted_cpmpany_name[:-1] if adjusted_cpmpany_name[-1] == "-" else adjusted_cpmpany_name
 
                         url = f"{base_url}/{industry}/{us_mkt}-{ticker.lower()}/{adjusted_cpmpany_name}"
 
                         if not self._is_valid_simplywallstreet_url(url, random.choice(tickers_constants.USER_AGENTS_LIST)):
                             continue
 
-                        _, cropped_img = get_and_crop_screenshot(url, 344, 261, 1174, 1085)
+                        full_screenshot, cropped_img = get_and_crop_screenshot(url, 344, 712, 1175, 1490)
 
                         width, height = cropped_img.size
                         mid_height = height // 2 
@@ -636,19 +636,25 @@ class TickerAnalyzer:
                         sharpened = gray.filter(ImageFilter.SHARPEN)
                         contrast = ImageEnhance.Contrast(sharpened).enhance(2.0)
                         inverted = ImageOps.invert(contrast)
-                        binarized = inverted.point(lambda x: 255 if x > 128 else 0, mode='1')
+                        binarized = inverted.point(lambda x: 255 if x > 128 else 0, mode="1")
                         binarized = binarized.resize((binarized.width * 2, binarized.height * 2))
                         text = pytesseract.image_to_string(binarized)
                         text_dict = self._extract_sections(text)
 
-                        top_half = cropped_img.crop((0, 0, width, mid_height))
+                        if text_dict:
+                            top_half = cropped_img.crop((0, 0, width, mid_height))
 
-                        self.summary.update({'Rewards' : text_dict["Rewards"]})
-                        self.summary.update({'Risk Analysis' : text_dict["Risk Analysis"]})
-                        self.summary.update({"image" : get_display_image(top_half)})
+                            if "Rewards" in text_dict.keys():
+                                self.summary.update({"Rewards" : text_dict["Rewards"]})
+                            if "Risk Analysis" in text_dict.keys():
+                                self.summary.update({"Risk Analysis" : text_dict["Risk Analysis"]})
+
+                            self.summary.update({"image" : get_display_image(top_half)})
+                        else:
+                            self.summary.update({"OCR error:" : "OCR retrieval was not successful"})
 
                         return self.summary
-            except:
+            except Exception as e:
                 pass
                 
             if not self.summary:
@@ -656,13 +662,13 @@ class TickerAnalyzer:
 
 
         def _normalize_company_name(self, name):
-            pattern = r'\b(?:' + '|'.join(tickers_constants.COMMON_SUFFIXES) + r')\b\.?,?'
-            name = re.sub(pattern, '', name, flags=re.IGNORECASE)
+            pattern = r"\b(?:" + "|".join(tickers_constants.COMMON_SUFFIXES) + r")\b\.?,?"
+            name = re.sub(pattern, "", name, flags=re.IGNORECASE)
             return name
         
 
         def _is_valid_simplywallstreet_url(self, url: str, user_agent: str):
-            headers = {'User-Agent': user_agent}
+            headers = {"User-Agent": user_agent}
             try:
                 response = requests.get(url, headers=headers, timeout=5)
 
@@ -690,7 +696,7 @@ class TickerAnalyzer:
                     index = 1
 
                 elif current_section:
-                    cleaned_line = re.sub(r"^(\*|¥|@|¥e|xe|ve|e\s|[-•→©\u2022]|\s)+", "", line, flags=re.IGNORECASE)
+                    cleaned_line = re.sub(r"^(\*|¥|@|¥e|xe|ve|e\s|%\s|%*|=\s|[-•→©\u2022]|\s)+", "", line, flags=re.IGNORECASE)
                     if cleaned_line and "See" not in cleaned_line:
                         data[current_section][str(index)] = cleaned_line
                         index += 1
@@ -701,7 +707,7 @@ class TickerAnalyzer:
     class StockAnalysis(Source):
         def get_ticker_info(self, ticker: str):
             try:
-                url = f'https://stockanalysis.com/stocks/{ticker.lower()}/forecast/'
+                url = f"https://stockanalysis.com/stocks/{ticker.lower()}/forecast/"
 
                 full_screenshot, cropped_img = get_and_crop_screenshot(url, 23, 1173, 1191, 1690)
 
@@ -747,7 +753,7 @@ class TickerAnalyzer:
             ]
 
             return f"""You are a professional financial analyst. Analyze the stock {ticker.upper()}
-            using the following structured data from four sources: {''.join(sections)}. 
+            using the following structured data from four sources: {"".join(sections)}. 
             Please provide:
             1. A concise summary of the stock's financial and technical status.
             2. Key strengths and weaknesses found in the data.
