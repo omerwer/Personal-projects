@@ -76,84 +76,158 @@
       if (!t) return alert('Enter ticker');
 
       const output = document.getElementById('output');
-      output.innerHTML = `<div class="text-blue-500 animate-pulse">🔄 Fetching data from ${source}...</div>`;
-      document.getElementById('result-img').classList.add('hidden');
+      const img = document.getElementById('result-img');
+      output.innerHTML = '';
+      img.classList.add('hidden');
 
-      try {
-        const res = await fetch(`/${source}/${t}`, {
-          method: source === 'ChatGPT' ? 'POST' : 'GET',
-          headers: { 'Content-Type': 'application/json' },
-          body: source === 'ChatGPT' ? JSON.stringify({ prompt: "auto" }) : undefined
+      if (source === 'ChatGPT') {
+        const evtSource = new EventSource(`/ChatGPTStream/${t}`);
+
+        const progressBar = document.createElement('div');
+        progressBar.className = "w-full bg-gray-300 rounded-full h-4 mt-4 mb-2";
+        const fill = document.createElement('div');
+        fill.className = "bg-blue-600 h-4 rounded-full transition-all";
+        fill.style.width = '0%';
+        fill.classList.add('text-white', 'text-xs', 'font-bold', 'flex', 'items-center', 'justify-center');
+        progressBar.appendChild(fill);
+        output.appendChild(progressBar);
+
+        evtSource.addEventListener("progress", (e) => {
+          const { source, progress } = JSON.parse(e.data);
+          const msg = document.createElement('div');
+          msg.className = "text-green-700 mt-1 animate-fadeIn";
+          msg.textContent = `✅ ${source} finished successfully!`;
+          output.appendChild(msg);
+          fill.style.width = `${progress}%`;
+          fill.textContent = `${progress}%`;
         });
-        if (!res.ok) throw new Error(`Error fetching ${source}: ${res.statusText}`);
-        const data = await res.json();
-        const s = data.summary;
-        output.innerHTML = '';
 
-        function renderFields(obj, level = 0) {
-          if (typeof obj === 'string' || typeof obj === 'number' || typeof obj === 'boolean') {
-            if (typeof obj === 'string') {
+        evtSource.addEventListener("status", (e) => {
+          const { data } = JSON.parse(e.data);
+
+          let msg = document.getElementById("status-message");
+          if (!msg) {
+            msg = document.createElement("div");
+            msg.id = "status-message";
+            msg.className = "text-black-700 font-bold mt-1 animate-fadeIn";
+            output.appendChild(msg);
+          }
+
+          msg.textContent = `${data}`;
+        });
+
+        evtSource.addEventListener("complete", (e) => {
+          evtSource.close();
+          const { summary } = JSON.parse(e.data);
+          if (!summary) return;
+
+          const renderFields = (obj, level = 0) => {
+            if (typeof obj === 'string' || typeof obj === 'number' || typeof obj === 'boolean') {
               return `<div class="ml-${level * 2}" style="white-space: pre-wrap;">${markdownToHtml(obj)}</div>`;
+            } else if (Array.isArray(obj)) {
+              return obj.map(item => `<div class="ml-${level * 2}">${renderFields(item, level + 1)}</div>`).join('');
+            } else if (typeof obj === 'object' && obj !== null) {
+              return Object.entries(obj).map(([k, v]) => {
+                if (typeof v === 'object' && v !== null) {
+                  return `<div class="mt-2 font-semibold text-gray-800">${k}:</div>
+                          <div class="ml-4 space-y-0.5">${renderFields(v, level + 1)}</div>`;
+                }
+                const valueHtml = (typeof v === 'string') ? markdownToHtml(v) : v;
+                return `<div class="ml-${level * 2}"><span class="font-medium text-gray-700">${k}:</span> ${valueHtml}</div>`;
+              }).join('');
             }
-            return `<div class="ml-${level * 2}">${obj}</div>`;
-          } else if (Array.isArray(obj)) {
-            return obj.map(item => `<div class="ml-${level * 2}">${renderFields(item, level + 1)}</div>`).join('');
-          } else if (typeof obj === 'object' && obj !== null) {
-            return Object.entries(obj).map(([k, v]) => {
-              if (typeof v === 'object' && v !== null) {
-                return `<div class="mt-2 font-semibold text-gray-800">${k}:</div>
-                        <div class="ml-4 space-y-0.5">${renderFields(v, level + 1)}</div>`;
+            return '';
+          };
+
+          const html = `<div class="bg-white border border-gray-300 rounded-lg shadow-md p-4 mt-4 animate-fadeIn">
+                          <h2 class="text-lg font-semibold text-blue-900 mb-2">${source} Final Summary</h2>
+                          ${renderFields(summary)}
+                        </div>`;
+          output.innerHTML += html;
+        });
+
+        evtSource.addEventListener("error", (e) => {
+          evtSource.close();
+          const { error } = JSON.parse(e.data);
+          output.innerHTML = `<div class="text-red-600 font-semibold">❌ Error: ${error}</div>`;
+        });
+
+      } else {
+        output.innerHTML = `<div class="text-blue-500 animate-pulse">🔄 Fetching data from ${source}...</div>`;
+        try {
+          const res = await fetch(`/${source}/${t}`, {
+            method: 'GET',
+            headers: { 'Content-Type': 'application/json' }
+          });
+
+          if (!res.ok) throw new Error(`Error fetching ${source}: ${res.statusText}`);
+          const data = await res.json();
+          const s = data.summary;
+          output.innerHTML = '';
+
+          const renderFields = (obj, level = 0) => {
+            if (typeof obj === 'string' || typeof obj === 'number' || typeof obj === 'boolean') {
+              if (typeof obj === 'string') {
+                return `<div class="ml-${level * 2}" style="white-space: pre-wrap;">${markdownToHtml(obj)}</div>`;
               }
-              const valueHtml = (typeof v === 'string') ? markdownToHtml(v) : v;
-              return `<div class="ml-${level * 2}"><span class="font-medium text-gray-700">${k}:</span> ${valueHtml}</div>`;
-            }).join('');
-          }
-          return '';
-        }
+              return `<div class="ml-${level * 2}">${obj}</div>`;
+            } else if (Array.isArray(obj)) {
+              return obj.map(item => `<div class="ml-${level * 2}">${renderFields(item, level + 1)}</div>`).join('');
+            } else if (typeof obj === 'object' && obj !== null) {
+              return Object.entries(obj).map(([k, v]) => {
+                if (typeof v === 'object' && v !== null) {
+                  return `<div class="mt-2 font-semibold text-gray-800">${k}:</div>
+                          <div class="ml-4 space-y-0.5">${renderFields(v, level + 1)}</div>`;
+                }
+                const valueHtml = (typeof v === 'string') ? markdownToHtml(v) : v;
+                return `<div class="ml-${level * 2}"><span class="font-medium text-gray-700">${k}:</span> ${valueHtml}</div>`;
+              }).join('');
+            }
+            return '';
+          };
 
-        function renderCard(title, fields) {
-          return `<div class="bg-white border border-gray-300 rounded-lg shadow-md p-4 mb-4 animate-fadeIn">
-                    ${title ? `<h2 class="text-lg font-semibold text-blue-900 mb-2">${title}</h2>` : ''}
-                    <div class="space-y-2">${renderFields(fields)}</div>
-                  </div>`;
-        }
+          const renderCard = (title, fields) => {
+            return `<div class="bg-white border border-gray-300 rounded-lg shadow-md p-4 mb-4 animate-fadeIn">
+                      ${title ? `<h2 class="text-lg font-semibold text-blue-900 mb-2">${title}</h2>` : ''}
+                      <div class="space-y-2">${renderFields(fields)}</div>
+                    </div>`;
+          };
 
-        let html = '';
-        if (s) {
-          const msg = s?.msg || s?.error;
-          const isError = Object.keys(s).length === 1 && msg && typeof msg === 'string';
+          let html = '';
+          if (s) {
+            const msg = s?.msg || s?.error;
+            const isError = Object.keys(s).length === 1 && msg && typeof msg === 'string';
 
-          if (isError) {
-            html = `<div class="bg-red-100 text-red-700 p-4 rounded-md shadow animate-fadeIn">⚠️ For ${source} - ${msg}</div>`;
-          } else if (source.toLowerCase() === 'zacks') {
-            html += renderCard(`${s.name || ''} (${s.ticker || ''})`, {
-              'Zacks Rank': s['zacks rank'],
-              'Forward P/E': s['Forward P/E'],
-              'Dividend Yield': s['dividend_yield'],
-              'Dividend Frequency': s['dividend_freq'],
-              'Dividend': s['dividend'],
-            });
+            if (isError) {
+              html = `<div class="bg-red-100 text-red-700 p-4 rounded-md shadow animate-fadeIn">⚠️ For ${source} - ${msg}</div>`;
+            } else if (source.toLowerCase() === 'zacks') {
+              html += renderCard(`${s.name || ''} (${s.ticker || ''})`, {
+                'Zacks Rank': s['zacks rank'],
+                'Forward P/E': s['Forward P/E'],
+                'Dividend Yield': s['dividend_yield'],
+                'Dividend Frequency': s['dividend_freq'],
+                'Dividend': s['dividend'],
+              });
+            } else {
+              html += renderCard(source.charAt(0).toUpperCase() + source.slice(1), s);
+            }
           } else {
-            html += renderCard(source.charAt(0).toUpperCase() + source.slice(1), s);
+            html = `<pre>${JSON.stringify(data, null, 2)}</pre>`;
           }
-        } else {
-          html = `<pre>${JSON.stringify(data, null, 2)}</pre>`;
-        }
 
-        output.innerHTML = html;
+          output.innerHTML = html;
 
-        const img = document.getElementById('result-img');
-        if (data.image) {
-          img.src = data.image;
-          img.classList.remove('hidden');
-        } else {
+          if (data.image) {
+            img.src = data.image;
+            img.classList.remove('hidden');
+          } else {
+            img.classList.add('hidden');
+          }
+
+        } catch (error) {
+          output.innerHTML = `<div class="text-red-600 font-semibold">❌ Error: ${error.message}</div>`;
           img.classList.add('hidden');
         }
-
-      } catch (error) {
-        output.innerHTML = `<div class="text-red-600 font-semibold">❌ Error: ${error.message}</div>`;
-        document.getElementById('chatgpt-prompt').classList.add('hidden');
-        document.getElementById('result-img').classList.add('hidden');
       }
     }
   </script>

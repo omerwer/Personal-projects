@@ -4,12 +4,15 @@ from stock_scrapper import TickerAnalyzer
 
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, JSONResponse
+from sse_starlette.sse import EventSourceResponse
+import asyncio
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 
 import urllib3
 import pandas as pd
 import math
+import json
 
 urllib3.disable_warnings()
 
@@ -117,16 +120,57 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-@app.post("/ChatGPT/{ticker}")
-async def chatgpt(ticker: str, request: Request):
-    try:
-        data = await request.json()
-        prompt = data.get("prompt", "")
-        if not prompt:
-            return JSONResponse(status_code=400, content={"error": "Prompt is required."})
 
-        summary = ta.get_chatgpt_info(ticker)
-        return JSONResponse({"summary": sanitize_for_json(summary)})
+@app.get("/ChatGPTStream/{ticker}")
+async def chatgpt_stream(ticker: str, request: Request):
+    fnished = {"zacks": False, "tv": False, "yf": False, "finviz": False, "sws": False, "sa": False}
+    alias_to_name = {"zacks": "Zacks", "tv": "TradingView", "yf": "Yahoo Finance", 
+                     "finviz": "Finviz", "sws": "Simply Wall Street", "sa": "StocksAnalysis"}
+    total_sources = len(fnished)
+    removed = []
 
-    except Exception as e:
-        return JSONResponse(status_code=500, content={"error": str(e)})
+    async def event_generator():
+        try:
+            task = asyncio.create_task(ta.get_chatgpt_info(ticker, fnished))
+            num_no_finished = total_sources
+            while num_no_finished > 0:
+                if await request.is_disconnected():
+                    break
+
+                finished_tasks = [src for src, done in fnished.items() if done and src not in removed]
+                num_no_finished -= len(finished_tasks)
+
+                for src in finished_tasks:
+                    removed.append(src)
+                    percent = int((len(removed) / total_sources) * 100)
+                    yield {
+                        "event": "progress",
+                        "data": json.dumps({"source": alias_to_name[src], "progress": percent})
+                    }
+                
+                if num_no_finished == 0:
+                    yield {
+                        "event": "status",
+                        "data": json.dumps({"data": "Running ChatGPT analysis..."})
+                    }
+
+                await asyncio.sleep(0.1)
+
+            summary = await task
+
+            yield {
+                "event": "status",
+                "data": json.dumps({"data": "ChatGPT analysis was successful!"})
+            }
+
+            yield {
+                "event": "complete",
+                "data": json.dumps({"summary": sanitize_for_json(summary)})
+            }
+        except Exception as e:
+            yield {
+                "event": "error",
+                "data": json.dumps({"error": str(e)})
+            }
+
+    return EventSourceResponse(event_generator())

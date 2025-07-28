@@ -10,3 +10,4 @@ urllib3
 uvicorn
 fastapi
 pyautogui
+sse-starlette

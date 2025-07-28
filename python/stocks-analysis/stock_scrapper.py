@@ -1,7 +1,7 @@
 
 import requests
 from abc import ABC
-
+import asyncio
 import imgkit
 import re
 import random
@@ -139,11 +139,13 @@ class TickerAnalyzer:
             self.cache["sa"].update({ticker : sa_ret})
 
             return sa_ret
-        
 
-    def get_chatgpt_info(self, ticker: str):
+
+    async def get_chatgpt_info(self, ticker: str, finished: dict):
         if self.cache["chatgpt"] and ticker in self.cache["chatgpt"].keys():
             return self.cache["chatgpt"][ticker]
+        
+        non_valid_msg = {"msg" : f"{ticker.upper()} is not a valid stock ticker. Please provide a valid stock ticker"}
         
         source_methods = {
             "zacks": self.zacks,
@@ -156,21 +158,35 @@ class TickerAnalyzer:
 
         futures = {}
         non_valid_count = 0
-        with ThreadPoolExecutor() as executor:
-            for source, obj in source_methods.items():
-                if ticker not in self.cache[source]:
-                    futures[source] = executor.submit(obj.get_ticker_info, ticker)
 
-        non_valid_msg = {"msg" : f"{ticker.upper()} is not a valid stock ticker. Please provide a valid stock ticker"}
+        loop = asyncio.get_event_loop()
+
+        for source, obj in source_methods.items():
+            if ticker not in self.cache[source]:
+                futures[source] = asyncio.create_task(asyncio.to_thread(obj.get_ticker_info, ticker))
+            else:
+                finished[source] = True
         
-        for source, future in futures.items():
-            try:
-                result = future.result()
-                if result == non_valid_msg:
-                    non_valid_count+=1
-                self.cache[source][ticker] = result
-            except Exception as e:
-                self.cache[source][ticker] = {"error": str(e)}
+        while futures:
+            to_remove = []
+            for source, future in futures.items():
+                if future.done():
+                    finished[source] = True
+                    try:
+                        result = future.result()
+                        if result == non_valid_msg:
+                            non_valid_count+=1
+                        self.cache[source][ticker] = result
+                    except Exception as e:
+                        error_result = {"error": str(e)}
+                        self.cache[source][ticker] = error_result
+
+                    to_remove.append(source)
+
+            for source in to_remove:
+                futures.pop(source)
+
+            await asyncio.sleep(0.1)
 
         if non_valid_count == len(source_methods):
             non_valid_count = 0
@@ -193,7 +209,7 @@ class TickerAnalyzer:
 
         self.cache["chatgpt"][ticker] = chatgpt_ret
         return chatgpt_ret 
-    
+
 
     class Source(ABC):
         def __init__(self):
@@ -492,7 +508,7 @@ class TickerAnalyzer:
                 self._upgrades_downgrades(attr_value)
 
 
-        def _get_otm_calls(self, otm_threshold: float=1.15):
+        def _get_otm_calls(self, otm_threshold: float=1.2):
             current_price = float(self.ticker.info.get("regularMarketPrice", 0))
 
             if current_price is None:
@@ -533,34 +549,49 @@ class TickerAnalyzer:
         def get_ticker_info(self, ticker: str):
             try:
                 stock = finvizfinance(ticker.upper())
-                                
-                data = stock.ticker_full_info()
-                
-                for attr in tickers_constants.FINVIZ_ATTR_LIST:
-                    try:
-                        _ = data["fundament"].pop(attr)
-                    except:
-                        continue
 
-                self.summary.update({"General info" : data["fundament"]})
+                try:
+                    fundament = stock.ticker_fundament()
+                    
+                    for attr in tickers_constants.FINVIZ_ATTR_LIST:
+                        try:
+                            _ = fundament.pop(attr)
+                        except:
+                            continue
+
+                    self.summary.update({"General info" : fundament})
+                except:
+                    pass
 
                 curr_date = datetime.now()
 
-                self._upgrades_downgrades(curr_date, data)
-                self._news(curr_date, data)
+                try:
+                    ratings_outer = stock.ticker_outer_ratings()
+                    self._upgrades_downgrades(curr_date, ratings_outer)
+                except:
+                    pass
+
+                try:
+                    news = stock.ticker_news()
+                    self._news(curr_date, news)
+                except:
+                    pass
 
                 insiders_dict = {}
 
-                for key, insider in stock.ticker_inside_trader().to_dict(orient="index").items():
-                    if str(curr_date.year)[-2:] in insider["Date"] or str(int(curr_date.year)-1)[-2:] in insider["Date"]:
-                        insider_name = insider.pop("Insider Trading")
-                        insiders_dict.update({insider_name : insider})
+                try:
+                    for key, insider in stock.ticker_inside_trader().to_dict(orient="index").items():
+                        if str(curr_date.year)[-2:] in insider["Date"] or str(int(curr_date.year)-1)[-2:] in insider["Date"]:
+                            insider_name = insider.pop("Insider Trading")
+                            insiders_dict.update({insider_name : insider})
 
-                insiders = {
-                    str(k): v for k, v in insiders_dict.items()
-                }
+                    insiders = {
+                        str(k): v for k, v in insiders_dict.items()
+                    }
 
-                self.summary.update({"Insiders trading" : insiders})
+                    self.summary.update({"Insiders trading" : insiders})
+                except:
+                    pass
             
             except Exception as e:
                 print(f"Error msg: {e}")
@@ -569,8 +600,8 @@ class TickerAnalyzer:
             return self.summary
 
         
-        def _news(self, curr_date, data):
-            news_dict = data["news"].to_dict(orient="index")
+        def _news(self, curr_date, news_raw):
+            news_dict = news_raw.to_dict(orient="index")
             recent_news_dict = {}
             
             for key, news in news_dict.items():
@@ -589,24 +620,22 @@ class TickerAnalyzer:
             }
 
             self.summary.update({"News" : news})
+
         
-        def _upgrades_downgrades(self, curr_date, data):
-            if "ratings_outer" not in data:
-                self.summary.update({"Upgrades/Downgrades" : {}})
-            else:
-                upgrades_dict = data["ratings_outer"].to_dict(orient="index")
-                recent_upgrades_dict = {}
-                for key, values in upgrades_dict.items():
-                    date = values.pop("Date")
-                    updgrade_downgrade_year = int(date.year)
-                    if updgrade_downgrade_year >= curr_date.year - 1:
-                        recent_upgrades_dict.update({date : values})
+        def _upgrades_downgrades(self, curr_date, ratings_outer):
+            upgrades_dict = ratings_outer.to_dict(orient="index")
+            recent_upgrades_dict = {}
+            for key, values in upgrades_dict.items():
+                date = values.pop("Date")
+                updgrade_downgrade_year = int(date.year)
+                if updgrade_downgrade_year >= curr_date.year - 1:
+                    recent_upgrades_dict.update({date : values})
 
-                upgrades = {
-                    str(k): v for k, v in recent_upgrades_dict.items()
-                }
+            upgrades = {
+                str(k): v for k, v in recent_upgrades_dict.items()
+            }
 
-                self.summary.update({"Upgrades/Downgrades" : upgrades})
+            self.summary.update({"Upgrades/Downgrades" : upgrades})
 
     class SimplyWallStreet(Source):
         @lru_cache(maxsize=128)       
