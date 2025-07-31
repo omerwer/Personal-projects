@@ -1,6 +1,6 @@
 # 🧠 Personal Projects by Omer Wertheimer
 
-Welcome to my collection of personal projects! This repository contains a variety of projects built with C++ and Python, ranging from games to computer vision and networking applications.
+This repository contains a variety of projects built with C++ and Python, ranging from games to computer vision and networking applications.
 
 ## 🗂️ Projects Overview
 
@@ -14,7 +14,7 @@ Free, open-source data fetaching web application from serveral well-known stocks
 
 ### 🐍 Python: RAG (Document Retrieval + LLM)
 
-A generic RAG pipeline that allows you to query local document collections (PDFs, text) with an LLM. It uses LangChain and a vector database (Chroma or FAISS) to retrieve context and feed it into a language model chat interface. Ideal for building Q&A assistants over custom document sets.  
+A generic RAG pipeline that allows you to query local document collections (PDFs, text) with an LLM. It uses LangChain and FAISS vector database to retrieve context and feed it into AI21 language model chat interface. Ideal for building Q&A assistants over custom document sets.  
 
 > 📂 Path: `python/rag`
 
