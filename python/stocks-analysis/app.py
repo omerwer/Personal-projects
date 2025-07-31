@@ -123,13 +123,13 @@ app.add_middleware(
 
 @app.get("/ChatGPTStream/{ticker}")
 async def chatgpt_stream(ticker: str, request: Request):
-    fnished = {"zacks": False, "tv": False, "yf": False, "finviz": False, "sws": False, "sa": False}
     alias_to_name = {"zacks": "Zacks", "tv": "TradingView", "yf": "Yahoo Finance", 
-                     "finviz": "Finviz", "sws": "Simply Wall Street", "sa": "StocksAnalysis"}
-    total_sources = len(fnished)
-    removed = []
+                     "finviz": "Finviz", "sws": "Simply Wall Street", "sa": "StockAnalysis"}
 
     async def event_generator():
+        fnished = {"zacks": False, "tv": False, "yf": False, "finviz": False, "sws": False, "sa": False}
+        total_sources = len(fnished)
+        removed = []
         try:
             task = asyncio.create_task(ta.get_chatgpt_info(ticker, fnished))
             num_no_finished = total_sources
