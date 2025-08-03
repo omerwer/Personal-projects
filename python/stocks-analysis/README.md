@@ -83,15 +83,14 @@ Always conduct your own research and consult a licensed financial advisor before
 
 ## 📁 Project Structure
 
-├── app.py # FastAPI backend </br>
-├── ticker constants.py # Holding constants for backend usage </br>
-├── run_web.sh # Run the web app </br>
-├── create_pswd.sh.sh # PIN code creation for app security </br>
-├── requirements.txt # Prerequisites for pip install </br>
-├── static/</br>
-│ ├── index.html # Main frontend page </br>
-│ ├── images/ # For Zacks image assets </br>
-└── stock_scrapper.py # Backend logic </br>
+├── **app.py** # FastAPI backend </br>
+├── **ticker constants.py** # Holding constants for backend usage </br>
+├── **run_web.sh** # Run the web app </br>
+├── **create_pswd.sh** # PIN code creation for app security </br>
+├── **requirements.txt** # Prerequisites for pip install </br>
+├── **static**/</br>
+│ ├── **index.html** # Main frontend page </br>
+└── **stock_scrapper.py** # Backend logic </br>
 
 ## 🛠️ Setup Instructions
 
@@ -133,9 +132,9 @@ Download from [wkhtmltopdf.org](https://wkhtmltopdf.org/downloads.html)
 pip install -r requirements.txt
 ```
 
-### 5. Create PIN code for app security (mandatory)
+### 5. Create PIN code for app security
 ```bash
-./ create_pswd.sh
+./create_pswd.sh
 ```
 
 ### 6. Run the app
