@@ -1,25 +1,31 @@
 #!/usr/bin/env python3
 
-from stock_scrapper import TickerAnalyzer
+import urllib3
+import pandas as pd
+import math
+import json
+from pathlib import Path
 
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, JSONResponse
 from sse_starlette.sse import EventSourceResponse
 import asyncio
+import bcrypt
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 
-import urllib3
-import pandas as pd
-import math
-import json
+from stock_scrapper import TickerAnalyzer
 
 urllib3.disable_warnings()
 
+PIN_FILE = Path(".pswd.txt")
+if not PIN_FILE.exists():
+    raise RuntimeError("❌ .pswd.txt not found. Run create_pswd.sh first.")
+SECRET_PIN = PIN_FILE.read_text().strip().encode()
+
+
 ta = TickerAnalyzer()
 app = FastAPI()
-
-SECRET_PIN = "123456"
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
@@ -47,8 +53,8 @@ def handle_image(image_base64):
 
 @app.post("/validate_pin")
 def validate_pin(payload: dict):
-    user_pin = payload.get("pin")
-    if user_pin == SECRET_PIN:
+    user_pin = payload.get("pin", "").encode()
+    if bcrypt.checkpw(user_pin, SECRET_PIN):
         return {"success": True}
     return {"success": False}
 

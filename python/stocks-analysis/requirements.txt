@@ -11,3 +11,4 @@ uvicorn
 fastapi
 pyautogui
 sse-starlette
+bcrypt
