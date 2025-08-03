@@ -24,6 +24,18 @@
   </script>
   <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
 </head>
+
+<div id="lock-screen" class="fixed inset-0 bg-black bg-opacity-80 flex flex-col items-center justify-center z-50">
+  <h2 class="text-white text-2xl font-bold mb-4">Enter 6-digit PIN</h2>
+  <input id="pin-input" type="password" maxlength="6"
+         class="text-center text-2xl tracking-widest p-3 w-48 rounded-lg shadow focus:outline-none focus:ring-2 focus:ring-blue-400" />
+  <button onclick="submitPin()"
+          class="mt-4 bg-blue-600 hover:bg-blue-700 text-white py-2 px-6 rounded-lg shadow">
+    Unlock
+  </button>
+  <p id="pin-error" class="text-red-400 mt-3 hidden">Invalid PIN. Try again.</p>
+</div>
+
 <body class="bg-gray-100 text-gray-800">
   <div class="max-w-3xl mx-auto p-6">
     <h1 class="text-4xl font-bold mb-6 text-center text-blue-700 flex justify-center items-center gap-2">
@@ -230,6 +242,30 @@
         }
       }
     }
+
+    async function submitPin() {
+      const pin = document.getElementById("pin-input").value;
+      const errorMsg = document.getElementById("pin-error");
+
+      const res = await fetch("/validate_pin", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ pin })
+      });
+
+      const result = await res.json();
+      if (result.success) {
+        document.getElementById("lock-screen").style.display = "none";
+      } else {
+        errorMsg.classList.remove("hidden");
+      }
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+      document.getElementById("lock-screen").style.display = "flex";
+    });
   </script>
 </body>
 </html>

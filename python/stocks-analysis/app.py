@@ -19,6 +19,8 @@ urllib3.disable_warnings()
 ta = TickerAnalyzer()
 app = FastAPI()
 
+SECRET_PIN = "123456"
+
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 def sanitize_for_json(obj):
@@ -41,6 +43,14 @@ def handle_image(image_base64):
         image_data = f"data:image/png;base64,{image_base64}"
 
     return image_data
+
+
+@app.post("/validate_pin")
+def validate_pin(payload: dict):
+    user_pin = payload.get("pin")
+    if user_pin == SECRET_PIN:
+        return {"success": True}
+    return {"success": False}
 
 
 @app.get("/")
