@@ -86,7 +86,7 @@ Always conduct your own research and consult a licensed financial advisor before
 ├── app.py # FastAPI backend </br>
 ├── ticker constants.py # Holding constants for backend usage </br>
 ├── run_web.sh # Run the web app </br>
-├── create_pswd.sh.sh # PIN code creation for app security
+├── create_pswd.sh.sh # PIN code creation for app security </br>
 ├── requirements.txt # Prerequisites for pip install </br>
 ├── static/</br>
 │ ├── index.html # Main frontend page </br>
