@@ -136,6 +136,21 @@
           }
         });
 
+        evtSource.addEventListener("stream", (e) => {
+          const { chunk } = JSON.parse(e.data);
+          const chatDiv = document.getElementById("chatgpt-stream-output");
+
+          if (!chatDiv) {
+            const newDiv = document.createElement("div");
+            newDiv.id = "chatgpt-stream-output";
+            newDiv.className = "bg-white border border-gray-300 rounded-lg shadow-md p-4 mt-4 animate-fadeIn whitespace-pre-wrap";
+            newDiv.innerHTML = chunk;
+            output.appendChild(newDiv);
+          } else {
+            chatDiv.innerHTML += chunk;
+          }
+        });
+
         evtSource.addEventListener("complete", (e) => {
           evtSource.close();
           const { summary } = JSON.parse(e.data);

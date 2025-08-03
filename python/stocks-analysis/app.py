@@ -143,17 +143,17 @@ async def chatgpt_stream(ticker: str, request: Request):
                      "finviz": "Finviz", "sws": "Simply Wall Street", "sa": "StockAnalysis"}
 
     async def event_generator():
-        fnished = {"zacks": False, "tv": False, "yf": False, "finviz": False, "sws": False, "sa": False}
-        total_sources = len(fnished)
+        finished = {k: False for k in alias_to_name}
+        total_sources = len(finished)
         removed = []
         try:
-            task = asyncio.create_task(ta.get_chatgpt_info(ticker, fnished))
+            task = asyncio.create_task(ta.gather_chatgpt_info(ticker, finished))
             num_no_finished = total_sources
             while num_no_finished > 0:
                 if await request.is_disconnected():
                     break
 
-                finished_tasks = [src for src, done in fnished.items() if done and src not in removed]
+                finished_tasks = [src for src, done in finished.items() if done and src not in removed]
                 num_no_finished -= len(finished_tasks)
 
                 for src in finished_tasks:
@@ -172,17 +172,21 @@ async def chatgpt_stream(ticker: str, request: Request):
 
                 await asyncio.sleep(0.1)
 
-            summary = await task
+            sources_data = await task
+
+            for chunk in ta.chatgpt.get_ticker_info(ticker, *sources_data):
+                if await request.is_disconnected():
+                    break
+                yield {
+                    "event": "stream",
+                    "data": json.dumps({"chunk": chunk})
+                }
 
             yield {
                 "event": "status",
                 "data": json.dumps({"data": "ChatGPT analysis was successful!"})
             }
 
-            yield {
-                "event": "complete",
-                "data": json.dumps({"summary": sanitize_for_json(summary)})
-            }
         except Exception as e:
             yield {
                 "event": "error",

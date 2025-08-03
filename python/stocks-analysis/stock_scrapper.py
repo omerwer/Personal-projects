@@ -140,8 +140,7 @@ class TickerAnalyzer:
 
             return sa_ret
 
-
-    async def get_chatgpt_info(self, ticker: str, finished: dict):
+    async def gather_chatgpt_info(self, ticker: str, finished: dict):
         if self.cache["chatgpt"] and ticker in self.cache["chatgpt"].keys():
             return self.cache["chatgpt"][ticker]
         
@@ -193,23 +192,9 @@ class TickerAnalyzer:
             return non_valid_msg
 
         non_valid_count = 0
-        
-        chatgpt_ret = self.chatgpt.get_ticker_info(
-            ticker,
-            self.cache["zacks"][ticker],
-            self.cache["tv"][ticker],
-            self.cache["yf"][ticker],
-            self.cache["finviz"][ticker],
-            self.cache["sws"][ticker],
-            self.cache["sa"][ticker]
-        )
 
-        if len(self.cache["chatgpt"]) == 20:
-            self.cache["chatgpt"].popitem(last=False)
-
-        self.cache["chatgpt"][ticker] = chatgpt_ret
-        return chatgpt_ret 
-
+        return [self.cache[source][ticker] for source in source_methods]
+    
 
     class Source(ABC):
         def __init__(self):
@@ -782,12 +767,13 @@ class TickerAnalyzer:
             ]
 
             return f"""You are a professional financial analyst. Analyze the stock {ticker.upper()}
-            using the following structured data from four sources: {"".join(sections)}. 
+            using the following structured data from {len(sections)} sources: {"".join(sections)}. 
             Please provide:
             1. A concise summary of the stock's financial and technical status.
             2. Key strengths and weaknesses found in the data.
             3. A clear investment recommendation (e.g., Strong Buy, Buy, Hold, Sell, Strong Sell).
             4. A one-sentence justification for your recommendation.
+            Make sure you keep you answer for each clause up to 5 lines.
             Remember to mention in capital letters that what you provide is not a financial advice before you analysis.
             """
 
@@ -801,9 +787,14 @@ class TickerAnalyzer:
             response = client.chat.completions.create(
                 model="gpt-4o-mini",
                 messages=[{"role": "user", "content": prompt}],
-                web_search=False
+                web_search=False,
+                stream=True
             )
-            return response.choices[0].message.content
+
+            for chunk in response:
+                delta = chunk.choices[0].delta
+                if hasattr(delta, "content") and delta.content:
+                    yield delta.content
 
         def get_ticker_info(self, ticker: str, zacks: dict, tv: dict, yf: dict, finviz: dict, sws: dict, sa: dict):
             prompt = self._build_prompt(ticker, zacks, tv, yf, finviz, sws, sa)
