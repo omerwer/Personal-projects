@@ -45,6 +45,7 @@ Always conduct your own research and consult a licensed financial advisor before
 - 🌐 Clean and responsive UI with Tailwind CSS
 - 📈 Automatically renders JSON responses into human-readable HTML
 - 🔗 Hyperlink and Markdown support for rich text formatting
+- 🛡️ PIN code when running the app for security
 
 ---
 
@@ -63,6 +64,7 @@ Always conduct your own research and consult a licensed financial advisor before
 - **finvizfinance** – Scrapes Finviz data
 - **g4f** – Free ChatGPT wrapper client for prompt-based AI responses
 - **CORS Middleware** – FastAPI middelware for frontend-backend communication
+- **bcrypt** – Hashing of PIN code for app security
 
 ### 🌐 Frontend
 
@@ -84,6 +86,7 @@ Always conduct your own research and consult a licensed financial advisor before
 ├── app.py # FastAPI backend </br>
 ├── ticker constants.py # Holding constants for backend usage </br>
 ├── run_web.sh # Run the web app </br>
+├── create_pswd.sh.sh # PIN code creation for app security
 ├── requirements.txt # Prerequisites for pip install </br>
 ├── static/</br>
 │ ├── index.html # Main frontend page </br>
@@ -130,7 +133,12 @@ Download from [wkhtmltopdf.org](https://wkhtmltopdf.org/downloads.html)
 pip install -r requirements.txt
 ```
 
-### 5. Run the backend server
+### 5. Create PIN code for app security (mandatory)
+```bash
+./ create_pswd.sh
+```
+
+### 6. Run the app
 ```bash
 ./run_web.sh
 ```
