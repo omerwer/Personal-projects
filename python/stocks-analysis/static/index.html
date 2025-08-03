@@ -121,11 +121,19 @@
           if (!msg) {
             msg = document.createElement("div");
             msg.id = "status-message";
-            msg.className = "text-black-700 font-bold mt-1 animate-fadeIn";
+            msg.className = "text-black-700 font-bold mt-1";
             output.appendChild(msg);
           }
 
           msg.textContent = `${data}`;
+
+          if (data.includes("Running")) {
+            msg.classList.add("animate-pulse");
+            msg.classList.remove("animate-fadeIn");
+          } else {
+            msg.classList.remove("animate-pulse");
+            msg.classList.add("animate-fadeIn");
+          }
         });
 
         evtSource.addEventListener("complete", (e) => {
