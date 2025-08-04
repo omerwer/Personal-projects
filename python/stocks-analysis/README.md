@@ -5,6 +5,8 @@ An interactive web-based stock analyzer app built with **FastAPI** and **vanilla
 Query live data from **Zacks**, **TradingView**, **Yahoo Finance**, **Finviz**, **Simply Wall Street** and **Stock Analysis** — all through a sleek frontend and Python-powered backend.<br/>
 The **ChatGPT** option performs query on all of the above sources and gives a general overview of the stock according to the collected data from those sources using on-premise ChatGPT LLM.
 
+![Demo](assets/stocks_app_demo.gif)
+
 ---
 
 ## ⚠️ Disclaimer
