@@ -763,8 +763,7 @@ class TickerAnalyzer:
         def get_ticker_info(self, ticker: str):
             reddit_url = f"https://www.reddit.com/search.json?q={ticker.lower()}&type=posts&sort=relevance"
 
-            # headers = {"User-Agent": "Mozilla/5.0"}
-            headers = {"User-Agent": random.choice(tickers_constants.USER_AGENTS_LIST)}
+            headers = {"User-Agent": "Mozilla/5.0"}
 
             response = requests.get(reddit_url, headers=headers)
 
