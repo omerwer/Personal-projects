@@ -127,6 +127,12 @@ def stockanalysis(ticker: str):
         "image": handle_image(image_base64)
     })
 
+@app.get("/Reddit/{ticker}")
+def reddit(ticker: str):
+    summary = ta.get_rdt_info(ticker)
+    return JSONResponse({"summary": sanitize_for_json(summary)})
+
+
 
 app.add_middleware(
     CORSMiddleware,
@@ -140,7 +146,8 @@ app.add_middleware(
 @app.get("/ChatGPTStream/{ticker}")
 async def chatgpt_stream(ticker: str, request: Request):
     alias_to_name = {"zacks": "Zacks", "tv": "TradingView", "yf": "Yahoo Finance", 
-                     "finviz": "Finviz", "sws": "Simply Wall Street", "sa": "StockAnalysis"}
+                     "finviz": "Finviz", "sws": "Simply Wall Street", "sa": "StockAnalysis", 
+                     "rdt": "Reddit"}
 
     async def event_generator():
         finished = {k: False for k in alias_to_name}

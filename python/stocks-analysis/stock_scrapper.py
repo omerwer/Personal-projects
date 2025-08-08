@@ -64,13 +64,14 @@ def get_display_image(cropped_img: Image):
 class TickerAnalyzer:
     def __init__(self):
         self.curr_ticker = ""
-        self.cache = {"zacks" : {}, "tv" : {}, "yf" : {}, "finviz" : {}, "sws" : {}, "sa" : {}, "chatgpt" : {}}
+        self.cache = {"zacks" : {}, "tv" : {}, "yf" : {}, "finviz" : {}, "sws" : {}, "sa" : {}, "rdt" : {}, "chatgpt" : {}}
         self.zacks = self.Zacks()
         self.tv = self.Tradingview()
         self.yf = self.YahooFinance()
         self.finviz = self.Finviz()
         self.sws = self.SimplyWallStreet()
         self.sa = self.StockAnalysis()
+        self.rdt = self.Reddit()
         self.chatgpt = self.Chatgpt()
 
     def get_zacks_info(self, ticker: str):
@@ -139,6 +140,17 @@ class TickerAnalyzer:
             self.cache["sa"].update({ticker : sa_ret})
 
             return sa_ret
+        
+    def get_rdt_info(self, ticker: str):
+        if self.cache["rdt"] and ticker in self.cache["rdt"].keys():
+            return self.cache["rdt"][ticker]
+        else:
+            rdt_ret = self.rdt.get_ticker_info(ticker)
+            if len(self.cache["rdt"]) == 20:
+                _, _ = self.cache["rdt"].popitem(last=False)
+            self.cache["rdt"].update({ticker : rdt_ret})
+
+            return rdt_ret
 
     async def gather_chatgpt_info(self, ticker: str, finished: dict):
         if self.cache["chatgpt"] and ticker in self.cache["chatgpt"].keys():
@@ -152,7 +164,8 @@ class TickerAnalyzer:
             "yf": self.yf,
             "finviz": self.finviz,
             "sws": self.sws,
-            "sa": self.sa
+            "sa": self.sa,
+            "rdt": self.rdt
         }
 
         futures = {}
@@ -744,7 +757,32 @@ class TickerAnalyzer:
                 self.summary = {"msg" : f"{ticker.upper()} is not a valid stock ticker. Please provide a valid stock ticker"}
 
             return self.summary
-                
+
+
+    class Reddit(Source):
+        def get_ticker_info(self, ticker: str):
+            reddit_url = f"https://www.reddit.com/search.json?q={ticker.lower()}&type=posts&sort=relevance"
+
+            # headers = {"User-Agent": "Mozilla/5.0"}
+            headers = {"User-Agent": random.choice(tickers_constants.USER_AGENTS_LIST)}
+
+            response = requests.get(reddit_url, headers=headers)
+
+            if response.status_code != 200:
+                return {"error": f"Failed to fetch Reddit posts. Status: {response.status_code}"}
+
+            data = response.json()
+            children = data.get("data", {}).get("children", [])
+
+            top_10_urls = [
+                f"https://www.reddit.com{child['data']['permalink']}"
+                for child in children[:15]
+            ]
+
+            self.summary.update({"Top disccusions" : top_10_urls})
+            
+            return self.summary
+
 
     class Chatgpt:
         def _format_dict(self, name: str, data: dict) -> str:
@@ -756,14 +794,15 @@ class TickerAnalyzer:
                 formatted += f"- {key}: {value}\n"
             return formatted + "\n"
 
-        def _build_prompt(self, ticker: str, zacks: dict, tv: dict, yf: dict, finviz: dict, sws: dict, sa: dict) -> str:
+        def _build_prompt(self, ticker: str, zacks: dict, tv: dict, yf: dict, finviz: dict, sws: dict, sa: dict, rdt: dict) -> str:
             sections = [
                 self._format_dict("Zacks", zacks),
                 self._format_dict("TradingView", tv),
                 self._format_dict("Yahoo Finance", yf),
                 self._format_dict("Finviz", finviz),
                 self._format_dict("SimplyWallStreet", sws),
-                self._format_dict("StockAnalysis", sa)
+                self._format_dict("StockAnalysis", sa),
+                self._format_dict("Reddit", rdt)
             ]
 
             return f"""You are a professional financial analyst. Analyze the stock {ticker.upper()}
@@ -796,9 +835,6 @@ class TickerAnalyzer:
                 if hasattr(delta, "content") and delta.content:
                     yield delta.content
 
-        def get_ticker_info(self, ticker: str, zacks: dict, tv: dict, yf: dict, finviz: dict, sws: dict, sa: dict):
-            prompt = self._build_prompt(ticker, zacks, tv, yf, finviz, sws, sa)
+        def get_ticker_info(self, ticker: str, zacks: dict, tv: dict, yf: dict, finviz: dict, sws: dict, sa: dict, rdt: dict):
+            prompt = self._build_prompt(ticker, zacks, tv, yf, finviz, sws, sa, rdt)
             return self._send_prompt(ticker, prompt)
-        
-
-
