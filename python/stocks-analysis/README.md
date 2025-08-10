@@ -130,18 +130,26 @@ brew install Caskroom/cask/wkhtmltopdf
 Download from [wkhtmltopdf.org](https://wkhtmltopdf.org/downloads.html)
 ⚠️ Make sure wkhtmltoimage is available in your system's PATH (hardcoded to default `/usr/bin/wkhtmltoimage`).
 
+### 4. Install Tor (for proxies):
+```bash
+sudo apt install tor
 
-### 4. Install dependencies
+sudo systemctl enable tor@default
+sudo systemctl start tor@default
+```
+
+
+### 5. Install dependencies
 ```bash
 pip install -r requirements.txt
 ```
 
-### 5. Create PIN code for app security
+### 6. Create PIN code for app security
 ```bash
 ./create_pswd.sh
 ```
 
-### 6. Run the app
+### 7. Run the app
 ```bash
 ./run_web.sh
 ```
