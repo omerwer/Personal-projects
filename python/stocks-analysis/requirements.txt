@@ -12,3 +12,4 @@ fastapi
 pyautogui
 sse-starlette
 bcrypt
+requests[socks]

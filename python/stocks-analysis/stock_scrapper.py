@@ -764,34 +764,51 @@ class TickerAnalyzer:
             reddit_url = f"https://www.reddit.com/search.json?q={ticker.lower()}&type=posts&sort=relevance"
 
             headers = {
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
-                            "(KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36",
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                            "AppleWebKit/537.36 (KHTML, like Gecko) "
+                            "Chrome/115.0.0.0 Safari/537.36",
                 "Accept-Language": "en-US,en;q=0.9",
-                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+                "Accept": "application/json, text/javascript, */*; q=0.01",
+                "Referer": "https://www.reddit.com/",
+                "Connection": "keep-alive"
             }
 
             proxies = {
-                'http': 'socks5h://127.0.0.1:9050',
-                'https': 'socks5h://127.0.0.1:9050'
+                "http": "socks5h://127.0.0.1:9050",
+                "https": "socks5h://127.0.0.1:9050"
             }
 
-            response = requests.get(reddit_url, headers=headers, proxies=proxies)
+            try:
+                response = requests.get(
+                    reddit_url,
+                    headers=headers,
+                    proxies=proxies,
+                    timeout=15
+                )
 
-            if response.status_code != 200:
-                return {"error": f"Failed to fetch Reddit posts. Status: {response.status_code}"}
+                if response.status_code == 429:
+                    import os
+                    os.system("systemctl restart tor@default")
+                    time.sleep(1.5)
+                    response = requests.get(reddit_url, headers=headers, proxies=proxies, timeout=15)
 
-            data = response.json()
-            children = data.get("data", {}).get("children", [])
+                if response.status_code != 200:
+                    return {"error": f"Failed to fetch Reddit posts. Status: {response.status_code}"}
 
-            top_10_urls = [
-                f"https://www.reddit.com{child['data']['permalink']}"
-                for child in children[:15]
-            ]
+                data = response.json()
+                children = data.get("data", {}).get("children", [])
 
-            self.summary.update({"Top disccusions" : top_10_urls})
-            
-            return self.summary
+                top_10_urls = [
+                    f"https://www.reddit.com{child['data']['permalink']}"
+                    for child in children[:15]
+                ]
 
+                self.summary.update({"Top discussions": top_10_urls})
+                return self.summary
+
+            except Exception as e:
+                return {"error": str(e)}
+        
 
     class Chatgpt:
         def _format_dict(self, name: str, data: dict) -> str:
