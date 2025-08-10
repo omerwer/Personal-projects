@@ -770,7 +770,12 @@ class TickerAnalyzer:
                 "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
             }
 
-            response = requests.get(reddit_url, headers=headers)
+            proxies = {
+                'http': 'socks5h://127.0.0.1:9050',
+                'https': 'socks5h://127.0.0.1:9050'
+            }
+
+            response = requests.get(reddit_url, headers=headers, proxies=proxies)
 
             if response.status_code != 200:
                 return {"error": f"Failed to fetch Reddit posts. Status: {response.status_code}"}
