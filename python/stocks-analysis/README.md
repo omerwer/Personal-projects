@@ -2,7 +2,7 @@
 
 An interactive web-based stock analyzer app built with **FastAPI** and **vanilla JavaScript + Tailwind CSS**.
 
-Query live data from **Zacks**, **TradingView**, **Yahoo Finance**, **Finviz**, **Simply Wall Street** and **Stock Analysis** — all through a sleek frontend and Python-powered backend.<br/>
+Query live data from **Zacks**, **TradingView**, **Yahoo Finance**, **Finviz**, **Simply Wall Street**, **Stock Analysis** and **Reddit** — all through a sleek frontend and Python-powered backend.<br/>
 The **ChatGPT** option performs query on all of the above sources and gives a general overview of the stock according to the collected data from those sources using on-premise ChatGPT LLM.
 
 ![Demo](assets/stocks_app_demo.gif)
@@ -27,6 +27,7 @@ All data is sourced from third-party services:
 - [Finviz](https://finviz.com/)
 - [Simply Wall Street](https://simplywall.st/?view/)
 - [Stock Analysis](https://stockanalysis.com/)
+- [Reddit](https://www.reddit.com/)
 - [ChatGPT](https://openai.com/)
 
 Use of this application is **subject to the terms of use of each of the above services**.  
@@ -43,6 +44,7 @@ Always conduct your own research and consult a licensed financial advisor before
   - Finviz
   - Simply Wall Street
   - Stock Analysis
+  - Reddit
 - 🧠 Generate stock-specific insights from the above sources using a fixed ChatGPT prompt
 - 🌐 Clean and responsive UI with Tailwind CSS
 - 📈 Automatically renders JSON responses into human-readable HTML
