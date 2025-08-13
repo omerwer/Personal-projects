@@ -16,11 +16,14 @@ from datetime import datetime, timedelta
 import pytesseract
 from concurrent.futures import ThreadPoolExecutor
 from finvizfinance.quote import finvizfinance
+from finvizfinance.screener.overview import Overview
 from g4f.client import Client
+import threading
 
 import tickers_constants
 
 pytesseract.pytesseract.tesseract_cmd = "/usr/bin/tesseract"
+lock = threading.Lock()
 
 
 def get_screen_size():
@@ -81,8 +84,12 @@ class TickerAnalyzer:
             zacks_ret =  self.zacks.get_ticker_info(ticker)
             if "msg" not in zacks_ret.keys():
                 if len(self.cache["zacks"]) == 20:
+                    lock.acquire()
                     _, _ = self.cache["zacks"].popitem(last=False)
+                    lock.release()
+                lock.acquire()
                 self.cache["zacks"].update({ticker : zacks_ret})
+                lock.release()
 
             return zacks_ret
 
@@ -92,8 +99,12 @@ class TickerAnalyzer:
         else:
             tv_ret =  self.tv.get_ticker_info(ticker)
             if len(self.cache["tv"]) == 20:
+                lock.acquire()
                 _, _ = self.cache["tv"].popitem(last=False)
+                lock.release()
+            lock.acquire()
             self.cache["tv"].update({ticker : tv_ret})
+            lock.release()
 
             return tv_ret
     
@@ -103,8 +114,12 @@ class TickerAnalyzer:
         else:
             yf_ret = self.yf.get_ticker_info(ticker)
             if len(self.cache["yf"]) == 20:
+                lock.acquire()
                 _, _ = self.cache["yf"].popitem(last=False)
+                lock.release()
+            lock.acquire()
             self.cache["yf"].update({ticker : yf_ret})
+            lock.release()
 
             return yf_ret
 
@@ -114,8 +129,12 @@ class TickerAnalyzer:
         else:
             finviz_ret = self.finviz.get_ticker_info(ticker)
             if len(self.cache["finviz"]) == 20:
+                lock.acquire()
                 _, _ = self.cache["finviz"].popitem(last=False)
+                lock.release()
+            lock.acquire()
             self.cache["finviz"].update({ticker : finviz_ret})
+            lock.release()
 
             return finviz_ret
 
@@ -125,8 +144,12 @@ class TickerAnalyzer:
         else:
             sws_ret = self.sws.get_ticker_info(ticker)
             if len(self.cache["sws"]) == 20:
+                lock.acquire()
                 _, _ = self.cache["sws"].popitem(last=False)
+                lock.release()
+            lock.acquire()
             self.cache["sws"].update({ticker : sws_ret})
+            lock.release()
 
             return sws_ret
         
@@ -136,8 +159,12 @@ class TickerAnalyzer:
         else:
             sa_ret = self.sa.get_ticker_info(ticker)
             if len(self.cache["sa"]) == 20:
+                lock.acquire()
                 _, _ = self.cache["sa"].popitem(last=False)
+                lock.release()
+            lock.acquire()
             self.cache["sa"].update({ticker : sa_ret})
+            lock.release()
 
             return sa_ret
         
@@ -147,8 +174,12 @@ class TickerAnalyzer:
         else:
             rdt_ret = self.rdt.get_ticker_info(ticker)
             if len(self.cache["rdt"]) == 20:
+                lock.acquire()
                 _, _ = self.cache["rdt"].popitem(last=False)
+                lock.release()
+            lock.acquire()
             self.cache["rdt"].update({ticker : rdt_ret})
+            lock.release()
 
             return rdt_ret
 
