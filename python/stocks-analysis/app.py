@@ -55,6 +55,7 @@ def handle_image(image_base64):
 def validate_pin(payload: dict):
     user_pin = payload.get("pin", "").encode()
     if bcrypt.checkpw(user_pin, SECRET_PIN):
+        ta.clear_cache()
         return {"success": True}
     return {"success": False}
 

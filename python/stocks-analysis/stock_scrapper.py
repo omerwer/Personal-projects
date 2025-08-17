@@ -77,6 +77,10 @@ class TickerAnalyzer:
         self.rdt = self.Reddit()
         self.chatgpt = self.Chatgpt()
 
+    def clear_cache(self):
+        for source in self.cache.keys():
+            self.cache[source] = {}
+
     def get_zacks_info(self, ticker: str):
         if self.cache["zacks"] and ticker in self.cache["zacks"].keys():
             return self.cache["zacks"][ticker]
