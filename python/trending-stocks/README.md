@@ -20,10 +20,10 @@ Includes an asynchronous multi-threaded entry point (app.py) that manages both t
 Employs Streamlit session state memory buffers to prevent data from being cleared when interacting with different buttons.
 
 ## Directory Structure
-├── backend.py                 # FastAPI Application Server & Gemini SDK Layer</br>
-├── frontend.py                # Streamlit Web User Interface Modules</br>
-├── app.py                     # Single-Command Multiprocess Execution Entry Point</br>
-└── README.md                  # System Documentation Guide</br>
+#### ├── backend.py                 # FastAPI Application Server & Gemini SDK Layer</br>
+#### ├── frontend.py                # Streamlit Web User Interface Modules</br>
+#### ├── app.py                     # Single-Command Multiprocess Execution Entry Point</br>
+#### └── README.md                  # System Documentation Guide</br>
 
 ## Setup & Local Installation Prereqs
 This application is built to run entirely inside your configured project directory and isolated virtual environment.
