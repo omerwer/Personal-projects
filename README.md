@@ -11,6 +11,13 @@ Free, open-source data fetaching web application from serveral well-known stocks
 > 📂 Path: `python/stocks-analysis`
 
 ---
+### 📈 Python: Reddit & Congressional Portfolio Stocks Fetching
+
+Agentic AI app fetching trending stocks data from Reddit and Congressional Portfolio activities
+
+> 📂 Path: `python/trending-stocks`
+
+---
 
 ### 🐍 Python: RAG (Document Retrieval + LLM)
 
