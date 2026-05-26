@@ -15,18 +15,19 @@ client = genai.Client(
 )
 
 # --- Structured Pydantic Outbound Data Schemas ---
+# --- Robust Structured Outbound Data Schemas ---
 class PoliticianActivity(BaseModel):
     name: str
     role: str
     activity_date: str
     asset: str
-    transaction_type: str  # e.g., Purchase, Sale, Exchange
+    transaction_type: str  
     amount_range: str
 
 class RedditStock(BaseModel):
     ticker: str
-    company_size: str      # Small-Cap, Mid-Cap
-    mention_count: int
+    company_size: str      
+    mention_count: str | int  # Flexible type prevents 500 errors if LLM returns text instead of an int
     sentiment_summary: str
 
 # --- Scraping Utilities ---
